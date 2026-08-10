@@ -12,6 +12,12 @@ GenLayer AI validators then adjudicate whether the submitted deliverable meaning
 
 https://proof-sponsor.vercel.app
 
+> **Note:** MetaMask may display a phishing warning for new `vercel.app` subdomains. This is a known false positive for recently deployed dApps on shared hosting. Click **"Vẫn kết nối"** / **"Proceed anyway"** to continue. An appeal has been filed with MetaMask's [eth-phishing-detect](https://github.com/MetaMask/eth-phishing-detect/issues).
+
+## Source Code
+
+https://github.com/YOUR_USERNAME/ProofSponsor
+
 ## Live Contract
 
 **GenLayer Studionet**
@@ -19,6 +25,8 @@ https://proof-sponsor.vercel.app
 ```text
 0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
 ```
+
+> The contract class is named `SponsorJudge` internally. This reflects the original adjudication engine name. The project and dApp are branded **ProofSponsor**.
 
 ## The Problem
 
@@ -47,7 +55,7 @@ Creator submits public evidence URL
         ↓
 GenLayer AI validators inspect the evidence
         ↓
-Decentralized adjudication
+Decentralized adjudication (run_nondet_unsafe)
         ↓
 APPROVED / REJECTED
         ↓
@@ -63,6 +71,11 @@ ProofSponsor uses GenLayer to resolve the core subjective question:
 Deterministic contracts cannot reliably answer this from unstructured public content.
 
 GenLayer Intelligent Contracts allow validators to inspect public evidence and use decentralized AI consensus to determine whether the deliverable semantically satisfies the sponsor's requirements.
+
+The adjudication uses `gl.vm.run_nondet_unsafe` with a leader-validator pattern:
+
+- **Leader** fetches the public evidence, verifies the wallet attribution marker, and prompts the AI to evaluate semantic fulfillment against the campaign requirements.
+- **Validators** independently repeat the same evaluation and confirm agreement with the leader verdict.
 
 This makes the adjudication result usable by other onchain systems such as:
 
@@ -93,18 +106,22 @@ Validators can therefore verify both:
 1. whether the content satisfies the sponsorship brief
 2. whether the public evidence is associated with the wallet submitting it
 
-## Public Adjudication Test
+## Onchain Test Results
 
 The deployed contract has been tested end-to-end on GenLayer Studionet.
 
 ### APPROVED case
+
+- **Campaign ID:** `creator-campaign-01`
+- **Creator wallet:** `0x146e44881d35814ba582d265af5b97ef2695ec8e`
+- **Evidence URL:** *(public article containing the wallet attribution marker and meaningful educational content about GenLayer)*
 
 A creator submitted a public article that:
 
 - explained GenLayer Intelligent Contracts
 - discussed decentralized AI-validator consensus
 - contained meaningful educational information
-- included the required wallet ownership marker
+- included the required wallet ownership marker (`SPONSORJUDGE_PROOF:0x146e...`)
 
 GenLayer adjudication returned:
 
@@ -120,6 +137,9 @@ Delivery verified
 
 ### REJECTED case
 
+- **Campaign ID:** same campaign
+- **Evidence URL:** *(separate submission with evidence that did not satisfy the campaign requirements)*
+
 A separate submission was intentionally tested with evidence that did not satisfy the campaign requirements.
 
 GenLayer adjudication returned:
@@ -130,7 +150,9 @@ REJECTED
 
 The frontend correctly displayed the failed verification result.
 
-These tests demonstrate that ProofSponsor does not simply approve submitted URLs or rely on deterministic keyword matching.
+### What the tests demonstrate
+
+These tests confirm that ProofSponsor does not simply approve submitted URLs or rely on deterministic keyword matching. The AI validators independently evaluated semantic fulfillment and wallet attribution, producing different outcomes for different evidence quality.
 
 ## Example Sponsorship Requirement
 
@@ -146,13 +168,15 @@ The validators compare the public deliverable against this requirement and deter
 
 ## Security Design
 
-- Wallet-specific creator attribution marker: `SPONSORJUDGE_PROOF:<wallet>`
-- Public evidence must be associated with the submitting creator
-- Approved evidence is claimed per campaign to reduce replay
-- Inaccessible or empty evidence fails closed to `REJECTED`
-- Validators evaluate semantic fulfillment rather than keyword presence alone
-- Closed campaigns cannot accept or adjudicate new submissions
-- Adjudication results are persisted onchain
+- **Wallet-specific creator attribution marker:** `SPONSORJUDGE_PROOF:<wallet>`
+- **Public evidence must be associated with the submitting creator**
+- **Anti-replay:** approved evidence is claimed per campaign — the same URL cannot be approved twice in the same campaign
+- **Fail-closed:** inaccessible, empty, or marker-missing evidence returns `REJECTED` without reaching the AI prompt
+- **Prompt injection fencing:** evidence content is wrapped in `<UNTRUSTED_EVIDENCE>` tags with explicit instructions to ignore any commands found inside
+- **Marker check before truncation:** the attribution marker is verified on the full evidence text before truncating to 14,000 characters, preventing false rejections for markers placed later in the content
+- **Semantic evaluation:** validators evaluate semantic fulfillment rather than keyword presence alone
+- **Campaign lifecycle:** closed campaigns cannot accept or adjudicate new submissions
+- **Onchain persistence:** adjudication results are stored onchain
 
 ## Frontend Reliability
 
@@ -160,34 +184,20 @@ ProofSponsor reads GenLayer `accepted` state when loading contract data.
 
 Normal state-changing transactions wait for `TransactionStatus.ACCEPTED` before the frontend re-reads state.
 
-AI adjudication is handled asynchronously.
-
-After `judge_content` returns a transaction hash, the frontend polls the submission status with backoff until the contract reports:
-
-```text
-APPROVED
-```
-
-or:
-
-```text
-REJECTED
-```
+AI adjudication is handled asynchronously. After `judge_content` returns a transaction hash, the frontend polls the submission status with backoff until the contract reports `APPROVED` or `REJECTED`.
 
 Transient RPC or rate-limit errors during polling do not automatically mark an adjudication as failed.
 
-The frontend also rejects evidence URL forms known to be unreliable for validator rendering, including:
+The frontend also rejects evidence URL forms known to be unreliable for validator rendering:
 
-```text
-raw.githubusercontent.com
-GitHub /blob/ URLs
-```
+- `raw.githubusercontent.com`
+- GitHub `/blob/` URLs
 
 Creators are instead instructed to provide a publicly accessible HTTPS webpage that validators can render.
 
 ## Tech Stack
 
-- GenLayer Intelligent Contracts
+- GenLayer Intelligent Contracts (GenVM v0.2.16)
 - GenLayer Studionet
 - genlayer-js
 - viem
