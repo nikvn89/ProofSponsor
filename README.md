@@ -16,7 +16,7 @@ https://proof-sponsor.vercel.app
 
 ## Source Code
 
-https://github.com/YOUR_USERNAME/ProofSponsor
+https://github.com/nikvn89/ProofSponsor
 
 ## Live Contract
 
