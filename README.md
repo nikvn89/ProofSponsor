@@ -10,9 +10,9 @@ GenLayer AI validators then adjudicate whether the submitted deliverable meaning
 
 ## Live Demo
 
-https://proof-sponsor.vercel.app
+https://proofsponsor-gl.vercel.app/
 
-> **Note:** MetaMask may display a phishing warning for new `vercel.app` subdomains. This is a known false positive for recently deployed dApps on shared hosting. Click **"Vẫn kết nối"** / **"Proceed anyway"** to continue. An appeal has been filed with MetaMask's [eth-phishing-detect](https://github.com/MetaMask/eth-phishing-detect/issues).
+> **Note:** MetaMask may currently display a security warning for the Vercel deployment. A false-positive review has been submitted. Reviewers may run the frontend locally if preferred.
 
 ## Source Code
 
@@ -20,13 +20,26 @@ https://github.com/nikvn89/ProofSponsor
 
 ## Live Contract
 
-**GenLayer Studionet**
+**Network:** GenLayer Studionet
 
 ```text
 0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
 ```
 
 > The contract class is named `SponsorJudge` internally. This reflects the original adjudication engine name. The project and dApp are branded **ProofSponsor**.
+
+## Reviewer Testing
+
+A complete copy-and-paste testing guide is available here:
+
+**[TESTING.md](./TESTING.md)**
+
+It includes both:
+
+- `APPROVED` test
+- `REJECTED` test
+
+and provides the exact campaign requirements, evidence content, delivery note, and expected results.
 
 ## The Problem
 
@@ -49,7 +62,7 @@ Campaign requirements stored onchain
         ↓
 Creator requests wallet-specific proof marker
         ↓
-Creator publishes content + ownership marker
+Creator publishes content + marker
         ↓
 Creator submits public evidence URL
         ↓
@@ -93,7 +106,7 @@ ProofSponsor generates a wallet-specific marker:
 SPONSORJUDGE_PROOF:<creator-wallet>
 ```
 
-Example from the public test:
+Example:
 
 ```text
 SPONSORJUDGE_PROOF:0x146e44881d35814ba582d265af5b97ef2695ec8e
@@ -101,7 +114,7 @@ SPONSORJUDGE_PROOF:0x146e44881d35814ba582d265af5b97ef2695ec8e
 
 The creator places this marker inside the public deliverable.
 
-Validators can therefore verify both:
+Validators therefore verify both:
 
 1. whether the content satisfies the sponsorship brief
 2. whether the public evidence is associated with the wallet submitting it
@@ -110,18 +123,9 @@ Validators can therefore verify both:
 
 The deployed contract has been tested end-to-end on GenLayer Studionet.
 
-### APPROVED case
+### APPROVED
 
-- **Campaign ID:** `creator-campaign-01`
-- **Creator wallet:** `0x146e44881d35814ba582d265af5b97ef2695ec8e`
-- **Evidence URL:** *(public article containing the wallet attribution marker and meaningful educational content about GenLayer)*
-
-A creator submitted a public article that:
-
-- explained GenLayer Intelligent Contracts
-- discussed decentralized AI-validator consensus
-- contained meaningful educational information
-- included the required wallet ownership marker (`SPONSORJUDGE_PROOF:0x146e...`)
+A public deliverable containing meaningful GenLayer educational content and the correct wallet ownership marker was submitted.
 
 GenLayer adjudication returned:
 
@@ -129,16 +133,15 @@ GenLayer adjudication returned:
 APPROVED
 ```
 
-The frontend subsequently loaded the accepted onchain result and displayed:
+The frontend displayed:
 
 ```text
+100%
 Delivery verified
+APPROVED
 ```
 
-### REJECTED case
-
-- **Campaign ID:** same campaign
-- **Evidence URL:** *(separate submission with evidence that did not satisfy the campaign requirements)*
+### REJECTED
 
 A separate submission was intentionally tested with evidence that did not satisfy the campaign requirements.
 
@@ -148,33 +151,19 @@ GenLayer adjudication returned:
 REJECTED
 ```
 
-The frontend correctly displayed the failed verification result.
+These tests demonstrate that ProofSponsor does not simply approve submitted URLs or rely on deterministic keyword matching.
 
-### What the tests demonstrate
-
-These tests confirm that ProofSponsor does not simply approve submitted URLs or rely on deterministic keyword matching. The AI validators independently evaluated semantic fulfillment and wallet attribution, producing different outcomes for different evidence quality.
-
-## Example Sponsorship Requirement
-
-```text
-Creator must publish a meaningful public article explaining how
-GenLayer Intelligent Contracts use decentralized AI validator consensus.
-
-The article must contain the required SponsorJudge ownership proof
-marker and provide meaningful educational information about GenLayer.
-```
-
-The validators compare the public deliverable against this requirement and determine semantic fulfillment.
+The validators evaluate semantic fulfillment and wallet attribution before producing the onchain verdict.
 
 ## Security Design
 
-- **Wallet-specific creator attribution marker:** `SPONSORJUDGE_PROOF:<wallet>`
-- **Public evidence must be associated with the submitting creator**
-- **Anti-replay:** approved evidence is claimed per campaign — the same URL cannot be approved twice in the same campaign
-- **Fail-closed:** inaccessible, empty, or marker-missing evidence returns `REJECTED` without reaching the AI prompt
-- **Prompt injection fencing:** evidence content is wrapped in `<UNTRUSTED_EVIDENCE>` tags with explicit instructions to ignore any commands found inside
-- **Marker check before truncation:** the attribution marker is verified on the full evidence text before truncating to 14,000 characters, preventing false rejections for markers placed later in the content
-- **Semantic evaluation:** validators evaluate semantic fulfillment rather than keyword presence alone
+- **Wallet-specific attribution:** `SPONSORJUDGE_PROOF:<wallet>`
+- **Public evidence ownership:** evidence must be associated with the submitting creator
+- **Anti-replay:** approved evidence is claimed per campaign
+- **Fail-closed:** inaccessible, empty, or marker-missing evidence returns `REJECTED`
+- **Prompt-injection fencing:** external evidence is treated as untrusted content
+- **Marker check before truncation:** attribution is checked against the full evidence before prompt-size truncation
+- **Semantic evaluation:** validators evaluate fulfillment rather than keyword presence alone
 - **Campaign lifecycle:** closed campaigns cannot accept or adjudicate new submissions
 - **Onchain persistence:** adjudication results are stored onchain
 
@@ -184,16 +173,26 @@ ProofSponsor reads GenLayer `accepted` state when loading contract data.
 
 Normal state-changing transactions wait for `TransactionStatus.ACCEPTED` before the frontend re-reads state.
 
-AI adjudication is handled asynchronously. After `judge_content` returns a transaction hash, the frontend polls the submission status with backoff until the contract reports `APPROVED` or `REJECTED`.
+AI adjudication is asynchronous. After `judge_content` returns a transaction hash, the frontend polls submission status with backoff until the contract reports:
 
-Transient RPC or rate-limit errors during polling do not automatically mark an adjudication as failed.
+```text
+APPROVED
+```
+
+or:
+
+```text
+REJECTED
+```
+
+Transient RPC or rate-limit errors during polling do not automatically mark the adjudication as failed.
 
 The frontend also rejects evidence URL forms known to be unreliable for validator rendering:
 
 - `raw.githubusercontent.com`
 - GitHub `/blob/` URLs
 
-Creators are instead instructed to provide a publicly accessible HTTPS webpage that validators can render.
+Creators should provide a publicly accessible HTTPS webpage that GenLayer validators can render.
 
 ## Tech Stack
 
@@ -208,15 +207,8 @@ Creators are instead instructed to provide a publicly accessible HTTPS webpage t
 
 ## Run Locally
 
-Install dependencies:
-
 ```bash
 npm install
-```
-
-Start the development server:
-
-```bash
 npm run dev
 ```
 
@@ -228,7 +220,7 @@ npm run build
 
 ## Environment
 
-Create a local `.env` file based on `.env.example`.
+Create `.env` from `.env.example`.
 
 ```text
 VITE_CONTRACT_ADDRESS=0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
@@ -244,7 +236,7 @@ Build Command: npm run build
 Output Directory: dist
 ```
 
-Set the following Vercel environment variable:
+Environment variable:
 
 ```text
 VITE_CONTRACT_ADDRESS=0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
@@ -265,6 +257,7 @@ ProofSponsor/
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
+├── TESTING.md
 ├── index.html
 ├── package.json
 ├── package-lock.json
