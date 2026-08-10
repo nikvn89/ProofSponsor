@@ -94,12 +94,6 @@ const sleep = (ms: number) =>
  * - create_campaign
  * - set_campaign_active
  * - submit_content
- *
- * We wait until ACCEPTED before the UI reads state again.
- *
- * Important:
- * Explicitly use a slow receipt polling interval to avoid excessive
- * RPC requests while GenLayer is processing the transaction.
  */
 async function write(
   account: string,
@@ -107,6 +101,10 @@ async function write(
   args: Array<string | boolean>,
 ) {
   const client = getClient(account)
+
+  // Ensure the connected wallet is using GenLayer Studionet
+  // before sending the transaction.
+  await client.connect('studionet')
 
   const hash = await client.writeContract({
     address: CONTRACT_ADDRESS,
@@ -131,12 +129,8 @@ async function write(
 /**
  * AI adjudication transaction.
  *
- * judge_content is intentionally submitted without waiting for
- * the transaction receipt because GenLayer AI consensus may take
- * considerably longer.
- *
- * The frontend tracks the final result by reading submission status
- * separately with pollSubmissionStatus().
+ * Submitted without waiting for the receipt because consensus
+ * can take longer. The final verdict is polled separately.
  */
 async function writeAsync(
   account: string,
@@ -144,6 +138,9 @@ async function writeAsync(
   args: Array<string | boolean>,
 ) {
   const client = getClient(account)
+
+  // Ensure the connected wallet is using GenLayer Studionet.
+  await client.connect('studionet')
 
   const hash = await client.writeContract({
     address: CONTRACT_ADDRESS,
@@ -175,21 +172,7 @@ async function read(
 }
 
 /**
- * Poll an AI-verification submission until GenLayer reaches
- * APPROVED or REJECTED.
- *
- * Poll schedule:
- *
- * ~15s
- * ~21s
- * ~29.4s
- * then max 30s
- *
- * Overall timeout:
- * 5 minutes
- *
- * Transient RPC errors are ignored because the transaction may
- * still be progressing normally onchain.
+ * Poll AI-verification result until APPROVED / REJECTED.
  */
 export async function pollSubmissionStatus(
   campaignId: string,
@@ -233,8 +216,8 @@ export async function pollSubmissionStatus(
         return status
       }
     } catch (error) {
-      // A temporary RPC failure does not mean adjudication failed.
-      // Keep polling until timeout.
+      // Temporary RPC failures should not be treated as
+      // adjudication failures.
       lastError = error
     }
 
@@ -304,41 +287,31 @@ export const sponsorJudge = {
       normalizeAddress(creator),
     ]),
 
-  getCampaignName: (
-    campaignId: string,
-  ) =>
+  getCampaignName: (campaignId: string) =>
     read(
       'get_campaign_name',
       [campaignId],
     ) as Promise<string>,
 
-  getCampaignRequirements: (
-    campaignId: string,
-  ) =>
+  getCampaignRequirements: (campaignId: string) =>
     read(
       'get_campaign_requirements',
       [campaignId],
     ) as Promise<string>,
 
-  getCampaignCreator: (
-    campaignId: string,
-  ) =>
+  getCampaignCreator: (campaignId: string) =>
     read(
       'get_campaign_creator',
       [campaignId],
     ) as Promise<string>,
 
-  isCampaignActive: (
-    campaignId: string,
-  ) =>
+  isCampaignActive: (campaignId: string) =>
     read(
       'is_campaign_active',
       [campaignId],
     ) as Promise<boolean>,
 
-  getRequiredProofMarker: (
-    creator: string,
-  ) =>
+  getRequiredProofMarker: (creator: string) =>
     read(
       'get_required_proof_marker',
       [normalizeAddress(creator)],
