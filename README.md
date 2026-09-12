@@ -42,6 +42,8 @@ A complete copy-and-paste testing guide is available here:
 
 **[TESTING.md](./TESTING.md)**
 
+The new public case-review milestone and its before/after verification are documented in **[MILESTONE_1.md](./MILESTONE_1.md)** and **[CHANGELOG.md](./CHANGELOG.md)**.
+
 It includes both:
 
 - `APPROVED` test
@@ -207,6 +209,18 @@ The frontend also rejects evidence URL forms known to be unreliable for validato
 - GitHub `/blob/` URLs
 
 Creators should provide a publicly accessible HTTPS webpage that GenLayer validators can render.
+
+## Public Delivery Review (Milestone 1)
+
+Open `/#/review` on the deployed app, or choose **Public review** on the desk. Enter an existing sponsorship ID and the wallet of its submitted creator. The resulting shareable URL loads the current accepted contract state without a wallet connection. It displays the brief, stored submission/verdict, required wallet marker, and whether the evidence URL was claimed for that campaign. **Export JSON** saves a browser-retrieved snapshot with the contract address and retrieval time.
+
+This is not a signed historical receipt: eleven accepted-state reads are not atomic, and external evidence pages may change. Check the contract and referenced page before making offchain decisions. The Python contract and its deployment are unchanged.
+
+Run the new reader tests with Node.js 22.18+ or 24+:
+
+```bash
+npm test
+```
 
 ## Tech Stack
 

@@ -406,3 +406,16 @@ REJECTED
 ```
 
 This demonstrates the core GenLayer use case of ProofSponsor: decentralized adjudication of qualitative sponsorship fulfillment.
+
+---
+
+# Milestone 1 — Public delivery review
+
+Only after the updated frontend is deployed to the **same** Vercel project:
+
+1. Visit `https://proofsponsor-gl.vercel.app/#/review` in a browser without connecting a wallet.
+2. Enter an **existing** sponsorship ID and its submitted creator wallet. The APPROVED or REJECTED tests above can generate a real pair; do not use an invented ID.
+3. Select **Open case**. Compare the brief, status, reason, marker, claimed flag and claim owner with accepted reads of `0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC` on GenLayer StudioNet.
+4. Select **Copy link** and open it in another browser. Confirm the same case loads directly without a wallet, then select **Export JSON** and inspect its contract, accepted state, retrieval time and limitations.
+5. Try a nonexistent campaign ID and a nonexistent creator for a real campaign. Neither should produce a fabricated dossier.
+6. Run `npm test` and `npm run build` locally. This milestone does not require a new contract deployment.

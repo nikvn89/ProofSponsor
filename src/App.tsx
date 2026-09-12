@@ -21,7 +21,9 @@ import {
 } from 'lucide-react'
 import WalletButton from './components/WalletButton'
 import StatusPill from './components/StatusPill'
+import ReviewDossier from './ReviewDossier'
 import { CONTRACT_ADDRESS, EXPLORER_BASE } from './lib/config'
+import { parseReviewHash, reviewPath } from './lib/review'
 import {
   connectWallet,
   normalizeAddress,
@@ -56,6 +58,18 @@ type Notice = {
 const clean = (value: unknown) => String(value ?? '').replace(/^"|"$/g, '')
 
 export default function App() {
+  const [hash, setHash] = useState(window.location.hash)
+
+  useEffect(() => {
+    const updateHash = () => setHash(window.location.hash)
+    window.addEventListener('hashchange', updateHash)
+    return () => window.removeEventListener('hashchange', updateHash)
+  }, [])
+
+  return parseReviewHash(hash) ? <ReviewDossier key={hash} /> : <Dashboard />
+}
+
+function Dashboard() {
   const [account, setAccount] = useState('')
   const [walletBusy, setWalletBusy] = useState(false)
   const [busy, setBusy] = useState('')
@@ -361,6 +375,7 @@ export default function App() {
         </a>
 
         <div className="topbar-actions">
+          <a className="contract-link review-nav-link" href="#/review">Public review <ArrowRight size={13} /></a>
           <a className="contract-link" href={explorer} target="_blank" rel="noreferrer">
             Contract <ExternalLink size={13} />
           </a>
@@ -756,6 +771,10 @@ export default function App() {
                       </div>
                       <StatusPill status={submission.status} />
                     </div>
+
+                    <a className="review-entry" href={reviewPath(campaign.id, submission.creator)}>
+                      Open public case review <ArrowRight size={15} />
+                    </a>
 
                     <div className="review-columns">
                       <ReviewBlock
