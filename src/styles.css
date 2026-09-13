@@ -292,6 +292,17 @@ input::placeholder,textarea::placeholder{color:#a9b5ad}
   margin-top:16px;display:inline-flex;align-items:center;gap:7px;
   color:#28643f;font-size:12px;font-weight:800;text-decoration:none
 }
+.attempt-history{margin-top:22px;padding-top:18px;border-top:1px solid #e1e9df}
+.attempt-history h4,.revision-panel h4{font-size:15px;margin:0 0 9px}
+.attempt-list{list-style:none;display:grid;gap:9px;margin:12px 0 0;padding:0}
+.attempt-list li{min-width:0;padding:12px;border:1px solid #dde7dc;border-radius:8px;background:#fbfdfb}
+.attempt-head{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:12px}
+.attempt-list p{margin:8px 0 0;color:#52685a;font-size:11px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.attempt-list a,.attempt-list code{display:block;margin-top:8px;color:#28643f;font-size:11px;overflow-wrap:anywhere}
+.attempt-list a{display:inline-flex;align-items:center;gap:5px}
+.revision-panel{margin-top:18px;padding:18px;border:1px solid #cedfce;border-radius:8px;background:#f4faf3}
+.revision-panel>p{color:#627b68;font-size:12px;line-height:1.5}
+.revision-panel .form-stack{margin-top:14px}
 .review-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:17px}
 .review-block{
   min-height:110px;padding:14px;border-radius:13px;

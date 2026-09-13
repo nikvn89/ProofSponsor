@@ -159,7 +159,7 @@ async function writeAsync(
  */
 async function read(
   functionName: string,
-  args: Array<string | boolean>,
+  args: Array<string | boolean | number>,
 ) {
   const client = getClient()
 
@@ -277,6 +277,18 @@ export const sponsorJudge = {
       validateEvidenceUrl(evidenceUrl),
     ]),
 
+  reviseRejectedContent: (
+    account: string,
+    campaignId: string,
+    description: string,
+    evidenceUrl: string,
+  ) =>
+    write(account, 'revise_rejected_content', [
+      campaignId,
+      description,
+      validateEvidenceUrl(evidenceUrl),
+    ]),
+
   judgeContent: (
     account: string,
     campaignId: string,
@@ -364,6 +376,21 @@ export const sponsorJudge = {
         normalizeAddress(creator),
       ],
     ) as Promise<string>,
+
+  getAttemptCount: (campaignId: string, creator: string) =>
+    read('get_attempt_count', [campaignId, normalizeAddress(creator)]) as Promise<number>,
+
+  getAttemptDescription: (campaignId: string, creator: string, attempt: number) =>
+    read('get_attempt_description', [campaignId, normalizeAddress(creator), attempt]) as Promise<string>,
+
+  getAttemptEvidence: (campaignId: string, creator: string, attempt: number) =>
+    read('get_attempt_evidence', [campaignId, normalizeAddress(creator), attempt]) as Promise<string>,
+
+  getAttemptStatus: (campaignId: string, creator: string, attempt: number) =>
+    read('get_attempt_status', [campaignId, normalizeAddress(creator), attempt]) as Promise<string>,
+
+  getAttemptReason: (campaignId: string, creator: string, attempt: number) =>
+    read('get_attempt_reason', [campaignId, normalizeAddress(creator), attempt]) as Promise<string>,
 
   isEvidenceClaimed: (
     campaignId: string,

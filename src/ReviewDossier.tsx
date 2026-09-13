@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft, Clipboard, Download, ExternalLink, LoaderCircle, Search } from 'lucide-react'
 import StatusPill from './components/StatusPill'
-import { CONTRACT_ADDRESS, EXPLORER_BASE } from './lib/config'
+import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V2_CONFIG_ERROR } from './lib/config'
 import { sponsorJudge } from './lib/genlayer'
 import {
   loadReview,
@@ -28,7 +28,7 @@ export default function ReviewDossier() {
     setError('')
     setFeedback('')
     try {
-      setReview(await loadReview(sponsorJudge, id, wallet, CONTRACT_ADDRESS))
+      setReview(await loadReview(sponsorJudge, id, wallet, CONTRACT_ADDRESS, new Date(), REVISION_ENABLED))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not read accepted contract state.')
     } finally {
@@ -114,6 +114,8 @@ export default function ReviewDossier() {
           </button>
         </form>
 
+        {V2_CONFIG_ERROR && <p className="review-error" role="alert">V2 requires its newly deployed contract address. This page is reading the original V1 contract.</p>}
+
         {error && <p className="review-error" role="alert">{error}</p>}
         {feedback && <p className="review-feedback" role="status">{feedback}</p>}
         {!review && !loading && !error && <p className="review-empty">Enter a sponsorship ID and creator wallet to load a case.</p>}
@@ -163,8 +165,23 @@ export default function ReviewDossier() {
               </dl>
             </section>
 
+            {REVISION_ENABLED && <section className="review-section">
+              <span className="overline">04 / Revision history</span>
+              <h3>{review.attempts.length} of 3 attempts</h3>
+              <ol className="attempt-list">
+                {review.attempts.map((attempt) => <li key={attempt.number}>
+                  <div className="attempt-head"><strong>Attempt {attempt.number}</strong><StatusPill status={attempt.status} /></div>
+                  <p>{attempt.description}</p>
+                  {safeEvidenceUrl(attempt.evidence) ?
+                    <a href={safeEvidenceUrl(attempt.evidence)!} target="_blank" rel="noopener noreferrer">{attempt.evidence} <ExternalLink size={12} /></a> :
+                    <code>{attempt.evidence}</code>}
+                  {attempt.reason && <p>Reason: {attempt.reason}</p>}
+                </li>)}
+              </ol>
+            </section>}
+
             <section className="review-section review-boundary">
-              <span className="overline">04 / Review boundary</span>
+              <span className="overline">{REVISION_ENABLED ? '05' : '04'} / Review boundary</span>
               <h3>What this record does not prove</h3>
               <ul>{review.limitations.map((limit) => <li key={limit}>{limit}</li>)}</ul>
               <a href={`${EXPLORER_BASE}/address/${CONTRACT_ADDRESS}`} target="_blank" rel="noopener noreferrer">Inspect deployed contract <ExternalLink size={13} /></a>

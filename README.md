@@ -16,15 +16,21 @@ https://proofsponsor-gl.vercel.app/
 
 https://github.com/nikvn89/ProofSponsor
 
-## Live Contract
+## Live Contract (V2 milestone deployment)
 
 **Network:** GenLayer Studionet
 
 ```text
-0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
+0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
 ```
 
-> The contract class is named `SponsorJudge` internally. This reflects the original adjudication engine name. The project and dApp are branded **ProofSponsor**.
+Deployment transaction:
+
+```text
+0x72ef78a2cf8bca501ae804efd5f6aa5e41228749e16a90cb302bbe11ce0d746a
+```
+
+The deployment is `FINALIZED / SUCCESS`, its deployed source matches `contracts/ProofSponsorV2.py` after newline normalization, and its live schema exposes all 21 expected methods. The contract class is named `SponsorJudgeV2` internally; the project and dApp are branded **ProofSponsor**.
 
 ## How to Try It
 
@@ -34,15 +40,13 @@ https://github.com/nikvn89/ProofSponsor
 4. Submit that public evidence URL and request adjudication.
 5. Verify that the accepted state resolves to `APPROVED` or `REJECTED` and that the result appears in the campaign/submission state.
 
-No funding is required for the ProofSponsor demo flow.
+The demo uses a test network; check current StudioNet transaction and deployment fees before testing. Do not fund an unfamiliar wallet or send real assets based on this guide.
 
 ## Reviewer Testing
 
 A complete copy-and-paste testing guide is available here:
 
-**[TESTING.md](./TESTING.md)**
-
-The new public case-review milestone and its before/after verification are documented in **[MILESTONE_1.md](./MILESTONE_1.md)** and **[CHANGELOG.md](./CHANGELOG.md)**.
+**[TESTING.md](./TESTING.md)**. New V2 behavior is recorded in **[CHANGELOG.md](./CHANGELOG.md)**.
 
 It includes both:
 
@@ -210,17 +214,40 @@ The frontend also rejects evidence URL forms known to be unreliable for validato
 
 Creators should provide a publicly accessible HTTPS webpage that GenLayer validators can render.
 
-## Public Delivery Review (Milestone 1)
+## Public Delivery Review
 
 Open `/#/review` on the deployed app, or choose **Public review** on the desk. Enter an existing sponsorship ID and the wallet of its submitted creator. The resulting shareable URL loads the current accepted contract state without a wallet connection. It displays the brief, stored submission/verdict, required wallet marker, and whether the evidence URL was claimed for that campaign. **Export JSON** saves a browser-retrieved snapshot with the contract address and retrieval time.
 
-This is not a signed historical receipt: eleven accepted-state reads are not atomic, and external evidence pages may change. Check the contract and referenced page before making offchain decisions. The Python contract and its deployment are unchanged.
+This is not a signed historical receipt: accepted-state reads are not atomic, and external evidence pages may change. Check the contract and referenced page before making offchain decisions.
 
 Run the new reader tests with Node.js 22.18+ or 24+:
 
 ```bash
 npm test
 ```
+
+## V2: revise a rejected delivery
+
+The **new onchain feature** is in `contracts/ProofSponsorV2.py`, separate from the already deployed V1. On V1 a creator's first submission is final even if rejected. In V2 the submitting creator can call `revise_rejected_content` with a different public HTTPS URL and description after a `REJECTED` result. This creates another `SUBMITTED` attempt; anyone may request a fresh `judge_content` adjudication. The contract keeps the original rejected evidence and reason, plus every later attempt, onchain. Only three attempts total are allowed. `APPROVED` and pending submissions cannot be revised; closed campaigns reject revisions.
+
+V2 is deployed as a separate contract because V1 has no documented upgrader configured. There is no automatic migration of V1 campaigns or submissions. This package targets the verified V2 deployment below; the rejected-to-revised runtime path must still be completed before claiming the milestone behavior as live proof.
+
+```text
+VITE_CONTRACT_ADDRESS=0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
+VITE_CONTRACT_VERSION=2
+```
+
+The old V1 address with `VITE_CONTRACT_VERSION=2` produces a configuration warning and does not enable revision actions. Recent campaign IDs are scoped to the configured contract address, so the old list is not presented as V2 campaign data.
+
+Run local transition tests (stubs, **not** GenLayer consensus tests):
+
+```bash
+python3 -m unittest discover -s tests -p 'test_contract_v2.py' -v
+npm test
+npm run build
+```
+
+Follow the V2 StudioNet path in [TESTING.md](./TESTING.md) before claiming a live milestone.
 
 ## Tech Stack
 
@@ -251,7 +278,8 @@ npm run build
 Create `.env` from `.env.example`.
 
 ```text
-VITE_CONTRACT_ADDRESS=0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
+VITE_CONTRACT_ADDRESS=0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
+VITE_CONTRACT_VERSION=2
 ```
 
 Do not commit `.env` or `.env.local`.
@@ -267,7 +295,8 @@ Output Directory: dist
 Environment variable:
 
 ```text
-VITE_CONTRACT_ADDRESS=0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
+VITE_CONTRACT_ADDRESS=0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
+VITE_CONTRACT_VERSION=2
 ```
 
 ## Repository Structure
@@ -275,17 +304,23 @@ VITE_CONTRACT_ADDRESS=0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
 ```text
 ProofSponsor/
 ├── contracts/
-│   └── ProofSponsor.py
+│   ├── ProofSponsor.py
+│   └── ProofSponsorV2.py
 ├── src/
 │   ├── components/
 │   ├── lib/
 │   ├── App.tsx
+│   ├── ReviewDossier.tsx
 │   ├── main.tsx
 │   └── styles.css
+├── tests/
+│   ├── review.test.mjs
+│   └── test_contract_v2.py
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
 ├── TESTING.md
+├── CHANGELOG.md
 ├── index.html
 ├── package.json
 ├── package-lock.json

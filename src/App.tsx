@@ -22,8 +22,9 @@ import {
 import WalletButton from './components/WalletButton'
 import StatusPill from './components/StatusPill'
 import ReviewDossier from './ReviewDossier'
-import { CONTRACT_ADDRESS, EXPLORER_BASE } from './lib/config'
-import { parseReviewHash, reviewPath } from './lib/review'
+import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V2_CONFIG_ERROR } from './lib/config'
+import { loadAttempts, parseReviewHash, reviewPath, safeEvidenceUrl } from './lib/review'
+import type { AttemptReader } from './lib/review'
 import {
   connectWallet,
   normalizeAddress,
@@ -47,6 +48,7 @@ type Submission = {
   evidence: string
   status: string
   reason: string
+  attempts: Awaited<ReturnType<typeof loadAttempts>>
 }
 
 type Notice = {
@@ -92,6 +94,8 @@ function Dashboard() {
     description: '',
     evidence: '',
   })
+
+  const [revisionForm, setRevisionForm] = useState({ description: '', evidence: '' })
 
   const [lookupWallet, setLookupWallet] = useState('')
   const [submission, setSubmission] = useState<Submission | null>(null)
@@ -307,6 +311,13 @@ function Dashboard() {
 
       if (!clean(status)) throw new Error('No deliverable found.')
 
+      const attempts = REVISION_ENABLED
+        ? await loadAttempts(sponsorJudge as AttemptReader, campaign.id, address)
+        : []
+      if (attempts.length && attempts[attempts.length - 1].status !== clean(status)) {
+        throw new Error('The accepted reads changed during loading. Refresh this delivery.')
+      }
+
       setLookupWallet(address)
       setSubmission({
         creator: address,
@@ -314,10 +325,37 @@ function Dashboard() {
         description: clean(description),
         evidence: clean(evidence),
         reason: clean(reason),
+        attempts,
       })
     } catch (error) {
       setNotice({ kind: 'error', message: msg(error) })
       setSubmission(null)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function reviseRejected(event: React.FormEvent) {
+    event.preventDefault()
+    if (!REVISION_ENABLED || !campaign || !submission || submission.status !== 'REJECTED') return
+    if (!account || account.toLowerCase() !== submission.creator.toLowerCase()) {
+      return setNotice({ kind: 'error', message: 'Connect the submitting creator wallet to revise.' })
+    }
+    if (revisionForm.description.trim().length < 20) {
+      return setNotice({ kind: 'error', message: 'Revised description must be at least 20 characters.' })
+    }
+
+    setBusy('revise')
+    try {
+      const result = await sponsorJudge.reviseRejectedContent(
+        account, campaign.id, revisionForm.description.trim(),
+        validateEvidenceUrl(revisionForm.evidence),
+      )
+      await loadSubmission(account)
+      setRevisionForm({ description: '', evidence: '' })
+      setNotice({ kind: 'success', message: 'Revised attempt stored. Request a new verification.', tx: result.hash })
+    } catch (error) {
+      setNotice({ kind: 'error', message: msg(error) })
     } finally {
       setBusy('')
     }
@@ -486,6 +524,12 @@ function Dashboard() {
                   View transaction <ExternalLink size={12} />
                 </a>
               )}
+            </div>
+          )}
+
+          {V2_CONFIG_ERROR && (
+            <div className="notice error" role="alert">
+              V2 requires a newly deployed contract address. Set VITE_CONTRACT_ADDRESS to that address before enabling VITE_CONTRACT_VERSION=2.
             </div>
           )}
 
@@ -846,6 +890,52 @@ function Dashboard() {
                           </>
                         )}
                       </button>
+                    )}
+
+                    {REVISION_ENABLED && (
+                      <div className="attempt-history">
+                        <h4>Onchain attempt history ({submission.attempts.length}/3)</h4>
+                        <ol className="attempt-list">
+                          {submission.attempts.map((attempt) => (
+                            <li key={attempt.number}>
+                              <div className="attempt-head"><strong>Attempt {attempt.number}</strong><StatusPill status={attempt.status} /></div>
+                              <p>{attempt.description}</p>
+                              {safeEvidenceUrl(attempt.evidence) ? (
+                                <a href={safeEvidenceUrl(attempt.evidence)!} target="_blank" rel="noopener noreferrer">
+                                  {attempt.evidence} <ExternalLink size={12} />
+                                </a>
+                              ) : <code>{attempt.evidence}</code>}
+                              {attempt.reason && <p>Reason: {attempt.reason}</p>}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    {REVISION_ENABLED && submission.status === 'REJECTED' && (
+                      <div className="revision-panel">
+                        <h4>Revise rejected delivery</h4>
+                        <p>Only the original creator may submit a new public URL. Previous attempts stay onchain.</p>
+                        {submission.attempts.length >= 3 ? (
+                          <p>The three-attempt limit has been reached.</p>
+                        ) : !campaign.active ? (
+                          <p>This campaign is closed. Its sponsor must reopen it before a revision.</p>
+                        ) : account.toLowerCase() !== submission.creator.toLowerCase() ? (
+                          <p>Connect the original creator wallet to revise this delivery.</p>
+                        ) : (
+                          <form className="form-stack" onSubmit={reviseRejected}>
+                            <Field label="Revised delivery note">
+                              <textarea rows={3} value={revisionForm.description} onChange={(event) => setRevisionForm({ ...revisionForm, description: event.target.value })} required />
+                            </Field>
+                            <Field label="New public evidence URL">
+                              <input value={revisionForm.evidence} onChange={(event) => setRevisionForm({ ...revisionForm, evidence: event.target.value })} placeholder="https://..." required />
+                            </Field>
+                            <button className="action primary-action" disabled={busy === 'revise'}>
+                              {busy === 'revise' ? 'Storing revision…' : 'Submit revised attempt'}
+                            </button>
+                          </form>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

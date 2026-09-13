@@ -12,6 +12,14 @@ export type ReviewReader = {
   getEvidenceClaimedBy(id: string, evidence: string): Promise<string>
 }
 
+export type AttemptReader = {
+  getAttemptCount(id: string, creator: string): Promise<number>
+  getAttemptDescription(id: string, creator: string, attempt: number): Promise<string>
+  getAttemptEvidence(id: string, creator: string, attempt: number): Promise<string>
+  getAttemptStatus(id: string, creator: string, attempt: number): Promise<string>
+  getAttemptReason(id: string, creator: string, attempt: number): Promise<string>
+}
+
 const limitations = [
   'This snapshot contains separate accepted-state reads, not an atomic block snapshot or a signed attestation.',
   'The evidence URL points to a live external page. Its contents and availability may change after the onchain verdict.',
@@ -68,12 +76,40 @@ export function safeEvidenceUrl(value: string): string | null {
   }
 }
 
+export async function loadAttempts(reader: AttemptReader, id: string, creator: string) {
+  const count = Number(text(await reader.getAttemptCount(id, creator)))
+  if (!Number.isInteger(count) || count < 1 || count > 3) {
+    throw new Error('V2 returned an invalid attempt count for this delivery.')
+  }
+  return Promise.all(Array.from({ length: count }, async (_, index) => {
+    const number = index + 1
+    const [description, evidence, status, reason] = await Promise.all([
+      reader.getAttemptDescription(id, creator, number),
+      reader.getAttemptEvidence(id, creator, number),
+      reader.getAttemptStatus(id, creator, number),
+      reader.getAttemptReason(id, creator, number),
+    ])
+    const currentStatus = text(status)
+    if (!text(evidence) || !['SUBMITTED', 'APPROVED', 'REJECTED'].includes(currentStatus)) {
+      throw new Error(`V2 returned an incomplete attempt #${number}.`)
+    }
+    return {
+      number,
+      description: text(description),
+      evidence: text(evidence),
+      status: currentStatus,
+      reason: text(reason),
+    }
+  }))
+}
+
 export async function loadReview(
-  reader: ReviewReader,
+  reader: ReviewReader & Partial<AttemptReader>,
   campaignIdInput: string,
   creatorInput: string,
   contractAddress: string,
   retrievedAt = new Date(),
+  withAttempts = false,
 ) {
   const id = campaignIdInput.trim()
   if (!id) throw new Error('Enter a sponsorship ID.')
@@ -110,11 +146,18 @@ export async function loadReview(
   const claimOwner = text(claimedBy)
   const claimMatchesCreator = isClaimed && claimOwner.toLowerCase() === creator.toLowerCase()
 
+  if (withAttempts && (!reader.getAttemptCount || !reader.getAttemptDescription ||
+    !reader.getAttemptEvidence || !reader.getAttemptStatus || !reader.getAttemptReason)) {
+    throw new Error('V2 attempt methods are unavailable.')
+  }
+  const attempts = withAttempts ? await loadAttempts(reader as AttemptReader, id, creator) : []
+
   return {
     schema: 'proofsponsor.delivery-review.v1',
     source: {
       chain: 'GenLayer StudioNet',
       contract: contractAddress,
+      contractVersion: withAttempts ? '2' : '1',
       state: 'accepted',
       retrievedAtUtc: retrievedAt.toISOString(),
     },
@@ -133,8 +176,10 @@ export async function loadReview(
       evidence,
       reason: text(reason),
     },
+    attempts,
     claim: { claimed: isClaimed, claimedBy: claimOwner, matchesCreator: claimMatchesCreator },
-    inconsistent: (status === 'APPROVED' && !claimMatchesCreator) || (!isClaimed && !!claimOwner),
+    inconsistent: (status === 'APPROVED' && !claimMatchesCreator) || (!isClaimed && !!claimOwner) ||
+      (withAttempts && attempts[attempts.length - 1]?.status !== status),
     limitations,
   }
 }

@@ -15,7 +15,13 @@ https://proofsponsor-gl.vercel.app/
 **GenLayer Studionet**
 
 ```text
-0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC
+0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
+```
+
+Deployment transaction:
+
+```text
+0x72ef78a2cf8bca501ae804efd5f6aa5e41228749e16a90cb302bbe11ce0d746a
 ```
 
 ---
@@ -409,13 +415,15 @@ This demonstrates the core GenLayer use case of ProofSponsor: decentralized adju
 
 ---
 
-# Milestone 1 — Public delivery review
+# V2 milestone — rejected-delivery revision
 
-Only after the updated frontend is deployed to the **same** Vercel project:
+The two tests above are also valid baseline checks against V2. The milestone-specific revision path below targets the separate V2 deployment shown at the top of this guide. Deployment and schema are verified; behavioral milestone evidence requires completing these runtime steps.
 
-1. Visit `https://proofsponsor-gl.vercel.app/#/review` in a browser without connecting a wallet.
-2. Enter an **existing** sponsorship ID and its submitted creator wallet. The APPROVED or REJECTED tests above can generate a real pair; do not use an invented ID.
-3. Select **Open case**. Compare the brief, status, reason, marker, claimed flag and claim owner with accepted reads of `0x3Aa42FdD6EC0299c4172aaB47C4f0586625736bC` on GenLayer StudioNet.
-4. Select **Copy link** and open it in another browser. Confirm the same case loads directly without a wallet, then select **Export JSON** and inspect its contract, accepted state, retrieval time and limitations.
-5. Try a nonexistent campaign ID and a nonexistent creator for a real campaign. Neither should produce a fabricated dossier.
-6. Run `npm test` and `npm run build` locally. This milestone does not require a new contract deployment.
+1. Confirm the V2 contract link resolves to `0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb` and its deployment transaction is `FINALIZED / SUCCESS`.
+2. Configure an updated frontend with `VITE_CONTRACT_ADDRESS=<new V2 address>` and `VITE_CONTRACT_VERSION=2`, then deploy it. Confirm the contract link points to the **new** address.
+3. Connect a sponsor wallet and create a unique V2 campaign with a detailed brief. Connect a different creator wallet. Publish a public HTTPS page containing that wallet's required marker but insufficient content, submit its URL and request judgment. Wait for accepted `REJECTED`.
+4. Load that creator's submission: attempt count is `1`, attempt #1 has the rejected URL and reason. With another wallet, attempt `revise_rejected_content` in Studio and confirm it is refused. The original creator must be the signer.
+5. Connect the original creator wallet. Publish a **different** HTTPS page with the same creator's marker and substantive content meeting the brief. Use **Revise rejected delivery** to submit its new URL. Confirm `SUBMITTED`, count `2`, and that attempt #1's rejected URL/reason remain unchanged.
+6. Request judgment again and wait for an accepted `APPROVED` or `REJECTED`. If approved, confirm attempt #2's status, final reason, and `is_evidence_claimed`/`get_evidence_claimed_by`. A revision after `APPROVED` must be refused. If rejected again, attempt #3 is possible, but a fourth must be refused.
+7. Open the public `/#/review` page with this real campaign ID and creator wallet, without connecting a wallet. Compare its full attempt history with accepted contract reads and save the link and JSON. An external page can change; this record is not a signed historical receipt.
+8. Preserve transaction hashes, accepted read outputs, before/after screenshots, Git diff, and test output. Local tests: `python3 -m unittest discover -s tests -p 'test_contract_v2.py' -v`, `npm test`, `npm run build`. **Do not submit a live V2 claim based only on these local tests.**

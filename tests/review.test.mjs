@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   loadReview,
+  loadAttempts,
   normalizeCreator,
   parseReviewHash,
   reviewPath,
@@ -33,6 +34,17 @@ function mockReader(overrides = {}) {
     getEvidenceClaimedBy: result('claimedBy', creator.toUpperCase()),
     ...overrides,
   }
+}
+
+function mockV2Reader(overrides = {}) {
+  return mockReader({
+    getAttemptCount: async () => 2,
+    getAttemptDescription: async (_id, _creator, number) => `Attempt ${number} description`,
+    getAttemptEvidence: async (_id, _creator, number) => `https://example.org/${number}`,
+    getAttemptStatus: async (_id, _creator, number) => number === 1 ? 'REJECTED' : 'APPROVED',
+    getAttemptReason: async (_id, _creator, number) => number === 1 ? 'Not sufficient.' : 'Satisfied.',
+    ...overrides,
+  })
 }
 
 test('creates a shareable route even when the campaign ID needs URL encoding', () => {
@@ -115,4 +127,21 @@ test('does not turn an untrusted onchain URL into a script or non-HTTPS link', (
   assert.equal(safeEvidenceUrl('http://example.org'), null)
   assert.equal(safeEvidenceUrl('https://user:pass@example.org/path'), null)
   assert.equal(safeEvidenceUrl('https://example.org/article'), 'https://example.org/article')
+})
+
+test('loads the immutable sequence of V2 attempts into the shareable dossier', async () => {
+  const reader = mockV2Reader()
+  const review = await loadReview(reader, 'case-1', creator, contract, new Date('2026-09-12T12:00:00Z'), true)
+  assert.equal(review.source.contractVersion, '2')
+  assert.deepEqual(review.attempts.map((attempt) => attempt.status), ['REJECTED', 'APPROVED'])
+  assert.equal(review.attempts[0].reason, 'Not sufficient.')
+  assert.equal(review.attempts[1].evidence, 'https://example.org/2')
+  assert.equal(review.inconsistent, false)
+})
+
+test('fails closed for invalid V2 history or a mismatched latest attempt', async () => {
+  await assert.rejects(loadAttempts(mockV2Reader({ getAttemptCount: async () => 4 }), 'case-1', creator), /invalid attempt count/)
+  await assert.rejects(loadAttempts(mockV2Reader({ getAttemptStatus: async () => '' }), 'case-1', creator), /incomplete attempt/)
+  const review = await loadReview(mockV2Reader({ getAttemptStatus: async () => 'REJECTED' }), 'case-1', creator, contract, new Date(), true)
+  assert.equal(review.inconsistent, true)
 })

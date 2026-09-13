@@ -1,12 +1,13 @@
 # Changelog
 
-## Unreleased - Milestone 1: public delivery dossier
+## V2 milestone - rejected-delivery revision lifecycle
 
-- Added a wallet-free, shareable `#/review?campaign=...&creator=...` case review for any existing campaign/delivery pair.
-- Combined eleven existing accepted-state contract views into a campaign brief, creator submission, verdict, required marker, and evidence-claim dossier.
-- Added a portable JSON export with retrieval time, contract address, source state, and explicit offchain/atomicity limitations.
-- Flagged contradictory accepted reads (for example `APPROVED` without a matching evidence claim) instead of silently showing a clean result.
-- Added eight automated tests for the new reader, shareable routes, missing data, inconsistent claims, and unsafe external links.
-- Kept the deployed Python contract and its address unchanged; this milestone is a frontend/reviewer workflow feature, not a new onchain deployment.
+- Added and deployed the standalone `contracts/ProofSponsorV2.py` contract at `0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb`. The V1 source and address remain unchanged.
+- Creators can revise a `REJECTED` delivery with a new HTTPS URL and description, at most twice after the initial submission. `SUBMITTED` and `APPROVED` deliveries cannot be revised.
+- Each of the three possible attempts stores its own description, evidence URL, status, and adjudication reason onchain. An attempted URL cannot be reused by the same creator, including variants with trailing slashes; approved evidence remains claimed per campaign.
+- A closed campaign cannot accept revisions. The revision transaction is signed by the original creator wallet, and a fresh GenLayer judgment is required for every new attempt.
+- The React desk and public case review display V2 attempt history, and the creator desk exposes the revision form only for an eligible wallet and delivery.
+- Added five local contract state-transition tests, a GenVM metadata-layout regression test, and ten frontend reader tests. These are not StudioNet consensus evidence.
+- The previous read-only case dossier remains available on V1 and V2; V2 is the substantive milestone feature. No V1 state is migrated automatically to a new deployment.
 
-The URL itself carries only a campaign ID and creator wallet; neither is a secret. The exported JSON is a locally retrieved snapshot, not a signed proof or a historical block receipt.
+The V2 frontend defaults to the verified V2 address and includes matching production environment values. Complete the rejected-to-revised StudioNet runtime path before claiming behavioral milestone proof.
