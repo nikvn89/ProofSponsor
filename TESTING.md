@@ -417,7 +417,19 @@ This demonstrates the core GenLayer use case of ProofSponsor: decentralized adju
 
 # V2 milestone — rejected-delivery revision
 
-The two tests above are also valid baseline checks against V2. The milestone-specific revision path below targets the separate V2 deployment shown at the top of this guide. Deployment and schema are verified; behavioral milestone evidence requires completing these runtime steps.
+The two tests above are also valid baseline checks against V2. The milestone-specific revision path below targets the separate V2 deployment shown at the top of this guide. Deployment, schema, and the rejected-to-revised behavior have been verified on StudioNet. The completed reference run is documented in [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md); the steps below remain the reproducible reviewer path.
+
+## Completed StudioNet reference run
+
+- Campaign: `ps-v2-live-1309-01.`
+- Sponsor: `0x6276095FAEA15108740445ff277fdA8c304657F4`
+- Creator: `0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE`
+- Attempt history: `REJECTED -> REJECTED -> APPROVED`
+- Evidence claimed by the creator: `true`
+- Public review consistency flag: `false`
+- Public review: `https://proofsponsor-gl.vercel.app/#/review?campaign=ps-v2-live-1309-01.&creator=0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE`
+
+The final approved judgment is `0xce7c4ed63bb1409705f2d5f03714887adfee5e173fdb58000a3a5e67c9472e6b`. It reached `Accepted`, `SUCCESS`, and `Finalized`, with the GenVM equivalence output `APPROVED`.
 
 1. Confirm the V2 contract link resolves to `0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb` and its deployment transaction is `FINALIZED / SUCCESS`.
 2. Configure an updated frontend with `VITE_CONTRACT_ADDRESS=<new V2 address>` and `VITE_CONTRACT_VERSION=2`, then deploy it. Confirm the contract link points to the **new** address.

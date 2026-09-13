@@ -46,7 +46,7 @@ The demo uses a test network; check current StudioNet transaction and deployment
 
 A complete copy-and-paste testing guide is available here:
 
-**[TESTING.md](./TESTING.md)**. New V2 behavior is recorded in **[CHANGELOG.md](./CHANGELOG.md)**.
+**[TESTING.md](./TESTING.md)**. New V2 behavior is recorded in **[CHANGELOG.md](./CHANGELOG.md)**, and the completed StudioNet milestone run is documented in **[RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md)**.
 
 It includes both:
 
@@ -230,7 +230,9 @@ npm test
 
 The **new onchain feature** is in `contracts/ProofSponsorV2.py`, separate from the already deployed V1. On V1 a creator's first submission is final even if rejected. In V2 the submitting creator can call `revise_rejected_content` with a different public HTTPS URL and description after a `REJECTED` result. This creates another `SUBMITTED` attempt; anyone may request a fresh `judge_content` adjudication. The contract keeps the original rejected evidence and reason, plus every later attempt, onchain. Only three attempts total are allowed. `APPROVED` and pending submissions cannot be revised; closed campaigns reject revisions.
 
-V2 is deployed as a separate contract because V1 has no documented upgrader configured. There is no automatic migration of V1 campaigns or submissions. This package targets the verified V2 deployment below; the rejected-to-revised runtime path must still be completed before claiming the milestone behavior as live proof.
+V2 is deployed as a separate contract because V1 has no documented upgrader configured. There is no automatic migration of V1 campaigns or submissions. This package targets the verified V2 deployment below.
+
+The rejected-delivery revision path has now been completed on StudioNet. Campaign `ps-v2-live-1309-01.` preserved two rejected attempts and accepted a third revised attempt. The final evidence was claimed by the submitting creator, and the wallet-free public review reported `inconsistent: false` across its accepted-state reads. See [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md) for the exact transactions, public review, source hash, and scope boundaries.
 
 ```text
 VITE_CONTRACT_ADDRESS=0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
@@ -247,7 +249,7 @@ npm test
 npm run build
 ```
 
-Follow the V2 StudioNet path in [TESTING.md](./TESTING.md) before claiming a live milestone.
+Follow the reproducible V2 StudioNet path in [TESTING.md](./TESTING.md). The completed reference run and its live evidence are recorded in [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md).
 
 ## Tech Stack
 
@@ -282,7 +284,7 @@ VITE_CONTRACT_ADDRESS=0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
 VITE_CONTRACT_VERSION=2
 ```
 
-Do not commit `.env` or `.env.local`.
+Do not commit `.env`, `.env.local`, or `.env.production`. Configure production values in the deployment platform; `.env.example` contains the public V2 defaults.
 
 ## Vercel Deployment
 

@@ -10,4 +10,12 @@
 - Added five local contract state-transition tests, a GenVM metadata-layout regression test, and ten frontend reader tests. These are not StudioNet consensus evidence.
 - The previous read-only case dossier remains available on V1 and V2; V2 is the substantive milestone feature. No V1 state is migrated automatically to a new deployment.
 
-The V2 frontend defaults to the verified V2 address and includes matching production environment values. Complete the rejected-to-revised StudioNet runtime path before claiming behavioral milestone proof.
+The V2 frontend defaults to the verified V2 address and includes matching production environment values.
+
+### StudioNet runtime completion — 2026-09-13
+
+- Completed the live rejected-delivery revision lifecycle on campaign `ps-v2-live-1309-01.`.
+- Preserved two rejected attempts, including their evidence URLs and adjudication reasons, before storing a third revised attempt.
+- The third attempt used a publicly accessible article with the exact creator marker and reached `APPROVED` through a finalized `judge_content` transaction.
+- Accepted-state public review confirmed `3 of 3` attempts, `claimed: true`, `matchesCreator: true`, and `inconsistent: false`.
+- Added [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md) and the exported accepted-state snapshot at `evidence/proofsponsor-v2-runtime.json`.
