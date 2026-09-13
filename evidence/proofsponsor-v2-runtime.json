@@ -1,0 +1,60 @@
+{
+  "schema": "proofsponsor.delivery-review.v1",
+  "source": {
+    "chain": "GenLayer StudioNet",
+    "contract": "0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb",
+    "contractVersion": "2",
+    "state": "accepted",
+    "retrievedAtUtc": "2026-09-13T01:32:47.423Z"
+  },
+  "campaign": {
+    "id": "ps-v2-live-1309-01.",
+    "name": "ProofSponsor V2 revision lifecycle",
+    "requirements": "Publish a public English article explaining all four points: how GenLayer validators fetch external evidence, compare its meaning with campaign requirements, reach decentralized AI consensus, and record the final verdict onchain. The page must contain the creator wallet's exact SPONSORJUDGE_PROOF marker.",
+    "sponsor": "0x6276095FAEA15108740445ff277fdA8c304657F4",
+    "active": true
+  },
+  "creator": "0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE",
+  "proofMarker": "SPONSORJUDGE_PROOF:0x037f58e33c1ec8fda272361e0aac1e31054a1cde",
+  "submission": {
+    "status": "APPROVED",
+    "description": "This final revision uses a publicly accessible article that fully explains all four required verification stages and contains the exact creator ownership marker.",
+    "evidence": "https://pastebin.com/wa622xJg",
+    "reason": "Sponsored content fulfilled the campaign requirements and passed wallet-to-evidence marker verification"
+  },
+  "attempts": [
+    {
+      "number": 1,
+      "description": "This is a deliberately incomplete first attempt used to demonstrate the rejected-delivery revision workflow.",
+      "evidence": "https://explorer-studio.genlayer.com/tx/0x3c161b06dc69804af320a07fc3c28a7ddcd24d7890dab23c46af10e3e0b7d2b6",
+      "status": "REJECTED",
+      "reason": "Sponsored content did not satisfy campaign requirements, creator attribution, or accessible-evidence requirements"
+    },
+    {
+      "number": 2,
+      "description": "This second attempt replaces the rejected placeholder with complete public evidence explaining the full ProofSponsor verification workflow.",
+      "evidence": "https://explorer-studio.genlayer.com/tx/0x641118742b4e9beb2ec461d3e735291ed3e50efbcb8869294297a99a8ed72cc9",
+      "status": "REJECTED",
+      "reason": "Sponsored content did not satisfy campaign requirements, creator attribution, or accessible-evidence requirements"
+    },
+    {
+      "number": 3,
+      "description": "This final revision uses a publicly accessible article that fully explains all four required verification stages and contains the exact creator ownership marker.",
+      "evidence": "https://pastebin.com/wa622xJg",
+      "status": "APPROVED",
+      "reason": "Sponsored content fulfilled the campaign requirements and passed wallet-to-evidence marker verification"
+    }
+  ],
+  "claim": {
+    "claimed": true,
+    "claimedBy": "0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE",
+    "matchesCreator": true
+  },
+  "inconsistent": false,
+  "limitations": [
+    "This snapshot contains separate accepted-state reads, not an atomic block snapshot or a signed attestation.",
+    "The evidence URL points to a live external page. Its contents and availability may change after the onchain verdict.",
+    "The wallet marker ties the reported page to a wallet string; it does not establish legal identity, authorship, or truth of offchain claims.",
+    "The verdict is the contract result, not an independent re-evaluation by this page."
+  ]
+}
