@@ -22,7 +22,7 @@ import {
 import WalletButton from './components/WalletButton'
 import StatusPill from './components/StatusPill'
 import ReviewDossier from './ReviewDossier'
-import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V2_CONFIG_ERROR } from './lib/config'
+import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V3_CONFIG_ERROR } from './lib/config'
 import { loadAttempts, parseReviewHash, reviewPath, safeEvidenceUrl } from './lib/review'
 import type { AttemptReader } from './lib/review'
 import {
@@ -49,6 +49,9 @@ type Submission = {
   status: string
   reason: string
   attempts: Awaited<ReturnType<typeof loadAttempts>>
+  attemptCanonicalUrls: string[]
+  unavailableRetries: number
+  maxUnavailableRetries: number
 }
 
 type Notice = {
@@ -58,6 +61,36 @@ type Notice = {
 } | null
 
 const clean = (value: unknown) => String(value ?? '').replace(/^"|"$/g, '')
+
+function useCanonicalEvidenceUrl(value: string) {
+  const [canonical, setCanonical] = useState('')
+
+  useEffect(() => {
+    const url = value.trim()
+    if (!url.startsWith('https://') || V3_CONFIG_ERROR) {
+      setCanonical('')
+      return
+    }
+
+    let active = true
+    const timer = window.setTimeout(() => {
+      sponsorJudge.normalizeEvidenceUrl(url)
+        .then((result) => {
+          if (active) setCanonical(clean(result))
+        })
+        .catch(() => {
+          if (active) setCanonical('')
+        })
+    }, 250)
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [value])
+
+  return canonical
+}
 
 export default function App() {
   const [hash, setHash] = useState(window.location.hash)
@@ -97,6 +130,9 @@ function Dashboard() {
 
   const [revisionForm, setRevisionForm] = useState({ description: '', evidence: '' })
 
+  const submitCanonical = useCanonicalEvidenceUrl(submitForm.evidence)
+  const revisionCanonical = useCanonicalEvidenceUrl(revisionForm.evidence)
+
   const [lookupWallet, setLookupWallet] = useState('')
   const [submission, setSubmission] = useState<Submission | null>(null)
 
@@ -107,10 +143,20 @@ function Dashboard() {
   const verificationProgress = useMemo(() => {
     if (!campaign) return 0
     if (!submission) return 25
-    if (submission.status === 'SUBMITTED') return 70
+    if (submission.status === 'SUBMITTED' || submission.status === 'UNAVAILABLE') return 70
     if (submission.status === 'APPROVED' || submission.status === 'REJECTED') return 100
     return 45
   }, [campaign, submission])
+
+  const submitDuplicate = Boolean(
+    submitCanonical &&
+    submission &&
+    account.toLowerCase() === submission.creator.toLowerCase() &&
+    submission.attemptCanonicalUrls.includes(submitCanonical),
+  )
+  const revisionDuplicate = Boolean(
+    revisionCanonical && submission?.attemptCanonicalUrls.includes(revisionCanonical),
+  )
 
   async function connect() {
     setWalletBusy(true)
@@ -318,6 +364,24 @@ function Dashboard() {
         throw new Error('The accepted reads changed during loading. Refresh this delivery.')
       }
 
+      let attemptCanonicalUrls: string[] = []
+      let unavailableRetries = 0
+      let maxUnavailableRetries = 0
+      if (REVISION_ENABLED) {
+        const retryState = await Promise.all([
+          Promise.all(
+            attempts.map(async (attempt) =>
+              clean(await sponsorJudge.normalizeEvidenceUrl(attempt.evidence)),
+            ),
+          ),
+          sponsorJudge.getUnavailableRetries(campaign.id, address),
+          sponsorJudge.getMaxUnavailableRetries(),
+        ])
+        attemptCanonicalUrls = retryState[0]
+        unavailableRetries = Number(retryState[1])
+        maxUnavailableRetries = Number(retryState[2])
+      }
+
       setLookupWallet(address)
       setSubmission({
         creator: address,
@@ -326,6 +390,9 @@ function Dashboard() {
         evidence: clean(evidence),
         reason: clean(reason),
         attempts,
+        attemptCanonicalUrls,
+        unavailableRetries,
+        maxUnavailableRetries,
       })
     } catch (error) {
       setNotice({ kind: 'error', message: msg(error) })
@@ -337,7 +404,8 @@ function Dashboard() {
 
   async function reviseRejected(event: React.FormEvent) {
     event.preventDefault()
-    if (!REVISION_ENABLED || !campaign || !submission || submission.status !== 'REJECTED') return
+    if (!REVISION_ENABLED || !campaign || !submission ||
+      !['REJECTED', 'UNAVAILABLE'].includes(submission.status)) return
     if (!account || account.toLowerCase() !== submission.creator.toLowerCase()) {
       return setNotice({ kind: 'error', message: 'Connect the submitting creator wallet to revise.' })
     }
@@ -459,6 +527,8 @@ function Dashboard() {
                 ? 'Delivery verified'
                 : submission?.status === 'REJECTED'
                   ? 'Delivery rejected'
+                  : submission?.status === 'UNAVAILABLE'
+                    ? 'Evidence temporarily unavailable'
                   : submission?.status === 'SUBMITTED'
                     ? 'Awaiting verification'
                     : campaign
@@ -527,9 +597,9 @@ function Dashboard() {
             </div>
           )}
 
-          {V2_CONFIG_ERROR && (
+          {V3_CONFIG_ERROR && (
             <div className="notice error" role="alert">
-              V2 requires a newly deployed contract address. Set VITE_CONTRACT_ADDRESS to that address before enabling VITE_CONTRACT_VERSION=2.
+              V3 requires a newly deployed contract address. Deploy ProofSponsorV3.py, then set VITE_CONTRACT_ADDRESS before enabling VITE_CONTRACT_VERSION=3.
             </div>
           )}
 
@@ -743,6 +813,12 @@ function Dashboard() {
                       <small>
                         Use a public HTTPS page that GenLayer validators can render.
                       </small>
+                      {submitCanonical && (
+                        <div className={`canonical-preview ${submitDuplicate ? 'duplicate' : ''}`}>
+                          Recorded as: <strong>{submitCanonical}</strong>
+                          {submitDuplicate && ' · This canonical URL already exists in the attempt history.'}
+                        </div>
+                      )}
                     </Field>
 
                     <button
@@ -853,11 +929,15 @@ function Dashboard() {
                         className={`result-banner ${
                           submission.status === 'APPROVED'
                             ? 'approved'
-                            : 'rejected'
+                            : submission.status === 'UNAVAILABLE'
+                              ? 'unavailable'
+                              : 'rejected'
                         }`}
                       >
                         {submission.status === 'APPROVED' ? (
                           <BadgeCheck size={21} />
+                        ) : submission.status === 'UNAVAILABLE' ? (
+                          <Globe2 size={21} />
                         ) : (
                           <XCircle size={21} />
                         )}
@@ -865,31 +945,43 @@ function Dashboard() {
                           <strong>
                             {submission.status === 'APPROVED'
                               ? 'Delivery verified'
-                              : 'Delivery not verified'}
+                              : submission.status === 'UNAVAILABLE'
+                                ? 'Evidence temporarily unavailable'
+                                : 'Delivery not verified'}
                           </strong>
                           <p>{submission.reason}</p>
                         </div>
                       </div>
                     )}
 
-                    {submission.status === 'SUBMITTED' && (
-                      <button
-                        className="verify-button"
-                        onClick={verifyDeliverable}
-                        disabled={busy === 'judge'}
-                      >
-                        {busy === 'judge' ? (
-                          <>
-                            <LoaderCircle className="spin" size={18} />
-                            GenLayer is verifying…
-                          </>
-                        ) : (
-                          <>
-                            <FileCheck2 size={18} />
-                            Verify delivery with GenLayer
-                          </>
+                    {['SUBMITTED', 'UNAVAILABLE'].includes(submission.status) && (
+                      <>
+                        <button
+                          className="verify-button"
+                          onClick={verifyDeliverable}
+                          disabled={busy === 'judge'}
+                        >
+                          {busy === 'judge' ? (
+                            <>
+                              <LoaderCircle className="spin" size={18} />
+                              GenLayer is verifying…
+                            </>
+                          ) : (
+                            <>
+                              <FileCheck2 size={18} />
+                              {submission.status === 'UNAVAILABLE'
+                                ? 'Verify again'
+                                : 'Verify delivery with GenLayer'}
+                            </>
+                          )}
+                        </button>
+                        {submission.status === 'UNAVAILABLE' && (
+                          <p className="retry-copy">
+                            Attempt {submission.attempts.length} of 3 preserved · retrieval retries{' '}
+                            {submission.unavailableRetries} of {submission.maxUnavailableRetries}
+                          </p>
                         )}
-                      </button>
+                      </>
                     )}
 
                     {REVISION_ENABLED && (
@@ -905,16 +997,25 @@ function Dashboard() {
                                   {attempt.evidence} <ExternalLink size={12} />
                                 </a>
                               ) : <code>{attempt.evidence}</code>}
-                              {attempt.reason && <p>Reason: {attempt.reason}</p>}
+                              {attempt.reason && (
+                                <p>
+                                  {attempt.status === 'UNAVAILABLE' ? 'Retrieval: ' : 'Reason: '}
+                                  {attempt.reason}
+                                </p>
+                              )}
                             </li>
                           ))}
                         </ol>
                       </div>
                     )}
 
-                    {REVISION_ENABLED && submission.status === 'REJECTED' && (
+                    {REVISION_ENABLED && ['REJECTED', 'UNAVAILABLE'].includes(submission.status) && (
                       <div className="revision-panel">
-                        <h4>Revise rejected delivery</h4>
+                        <h4>
+                          {submission.status === 'UNAVAILABLE'
+                            ? 'Use different evidence'
+                            : 'Revise rejected delivery'}
+                        </h4>
                         <p>Only the original creator may submit a new public URL. Previous attempts stay onchain.</p>
                         {submission.attempts.length >= 3 ? (
                           <p>The three-attempt limit has been reached.</p>
@@ -929,6 +1030,12 @@ function Dashboard() {
                             </Field>
                             <Field label="New public evidence URL">
                               <input value={revisionForm.evidence} onChange={(event) => setRevisionForm({ ...revisionForm, evidence: event.target.value })} placeholder="https://..." required />
+                              {revisionCanonical && (
+                                <div className={`canonical-preview ${revisionDuplicate ? 'duplicate' : ''}`}>
+                                  Recorded as: <strong>{revisionCanonical}</strong>
+                                  {revisionDuplicate && ' · This canonical URL already exists in the attempt history.'}
+                                </div>
+                              )}
                             </Field>
                             <button className="action primary-action" disabled={busy === 'revise'}>
                               {busy === 'revise' ? 'Storing revision…' : 'Submit revised attempt'}

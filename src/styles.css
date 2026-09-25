@@ -326,6 +326,7 @@ input::placeholder,textarea::placeholder{color:#a9b5ad}
 }
 .result-banner.approved{background:#e7f5e9;color:#245c36;border:1px solid #cce7d1}
 .result-banner.rejected{background:#fbefed;color:#8c4238;border:1px solid #efcfca}
+.result-banner.unavailable{background:#fff6dc;color:#7b5a12;border:1px solid #ead18b}
 .result-banner strong{font-size:12px}
 .result-banner p{margin:4px 0 0;font-size:11px;line-height:1.5}
 .verify-button{
@@ -355,8 +356,14 @@ input::placeholder,textarea::placeholder{color:#a9b5ad}
 }
 .pill.good{color:#2c6b41;background:#e7f4e9;border:1px solid #cce5d1}
 .pill.bad{color:#985044;background:#f9ece9;border:1px solid #efcfc9}
+.pill.warn{color:#7b5a12;background:#fff4cf;border:1px solid #e9cf7d}
 .pill.pending{color:#7e6b26;background:#f8f1d9;border:1px solid #eaddae}
 .pill.neutral{color:#52685a;background:#eef3ed;border:1px solid #dae3d9}
+
+.canonical-preview{margin-top:6px;color:#64786a;font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+.canonical-preview strong{color:#355644}
+.canonical-preview.duplicate{color:#986016}
+.retry-copy{margin:9px 0 0;color:#7b5a12;font-size:11px;font-weight:700;text-align:center}
 
 .footer{
   width:min(1380px,calc(100% - 32px));

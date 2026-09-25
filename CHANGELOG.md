@@ -1,5 +1,24 @@
 # Changelog
 
+## V3 contract generation — CONTRACT CHANGED, REDEPLOYMENT REQUIRED
+
+- Added `contracts/ProofSponsorV3.py`. Retrieval exceptions, `None`, and empty rendered content now produce `UNAVAILABLE` instead of a false content rejection. The current attempt remains intact and can be verified again; five consecutive retrieval failures close it as `REJECTED`.
+- Added canonical evidence URL identity across attempt reuse and campaign claims. V3 removes fragments and common tracking parameters, normalizes scheme/host/`www`, preserves case-sensitive paths, and retains meaningful query parameters.
+- Added accepted-state views for retrieval retry counts, the retry ceiling, and canonical URL previews. The frontend displays an amber `UNAVAILABLE` state, **Verify again**, the preserved-attempt counter, and **Recorded as** URL previews.
+- Added 12 focused V3 behavior tests, an `UNAVAILABLE` public-review regression test, `SECURITY.md`, and GitHub Actions CI.
+- Package version is now `3.0.0`. Earlier V2 work did not bump the package version; from this release onward the package version follows the contract generation.
+- V1 and V2 source files remain byte-for-byte unchanged.
+
+### Deployment boundary
+
+- Previous V2 address: `0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb`
+- Previous V2 source SHA-256: `8cc60cc93b195679172b8a6240d24f54a87be6c40be70784ba061e8f4775df3f`
+- New V3 address: `TO BE RECORDED AFTER DEPLOYMENT`
+- New V3 deployment transaction: `TO BE RECORDED AFTER DEPLOYMENT`
+- New V3 source SHA-256: `TO BE RECORDED AFTER DEPLOYMENT`
+
+The V3 deployment starts with empty storage. Campaign `ps-v2-live-1309-01.` and every other V2 record remain readable at the V2 address but are not migrated. The app must not be pointed at V3 until the new address has been entered in its environment configuration.
+
 ## V2 milestone - rejected-delivery revision lifecycle
 
 - Added and deployed the standalone `contracts/ProofSponsorV2.py` contract at `0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb`. The V1 source and address remain unchanged.

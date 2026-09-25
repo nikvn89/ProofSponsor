@@ -1,4 +1,41 @@
-# ProofSponsor V2 — StudioNet Runtime Evidence
+# ProofSponsor — StudioNet Runtime Evidence
+
+## V3 — retrieval-safe adjudication
+
+V3 changes the contract and must be deployed separately. The rows below are deliberately marked `NOT RUN` in this pre-deployment package. Replace each marker only after the corresponding StudioNet transaction is accepted, and link the exact transaction.
+
+### Deployment and source
+
+- Network: GenLayer StudioNet (`61999`)
+- Contract: `TO BE RECORDED AFTER DEPLOYMENT`
+- Deployment transaction: `NOT RUN`
+- Contract source: `contracts/ProofSponsorV3.py`
+- Source SHA-256: `TO BE RECORDED AFTER DEPLOYMENT`
+- Runtime campaign: `TO BE RECORDED AFTER DEPLOYMENT`
+
+### Required V3 runtime matrix
+
+| # | Action | Required accepted result | Transaction evidence |
+| --- | --- | --- | --- |
+| 1 | Deploy `ProofSponsorV3.py` | Fresh V3 address | `NOT RUN` |
+| 2 | `create_campaign` | Campaign is active | `NOT RUN` |
+| 3 | `submit_content` while the evidence route is still unpublished/404 | `SUBMITTED`; `attempt_count = 1` | `NOT RUN` |
+| 4 | `judge_content` while retrieval fails | `UNAVAILABLE`; `attempt_count = 1`; retries = 1 | `NOT RUN` |
+| 5 | Publish the page, then call `judge_content` again | `APPROVED`; `attempt_count = 1` | `NOT RUN` |
+| 6 | Creator B submits a tracking variant of Creator A's claimed page | Revert: `evidence already claimed` | `NOT RUN` |
+| 7 | Creator A revises with a fragment variant of its attempted URL | Revert: `creator already used this evidence URL` | `NOT RUN` |
+| 8 | Complete `REJECTED -> revise -> APPROVED` on V3 | Immutable multi-attempt history | `NOT RUN` |
+| 9 | Read `normalize_evidence_url` with a dirty URL | Canonical URL returned | `NOT RUN` |
+
+Rows 4 and 5 are the load-bearing proof: they must show the same attempt count before and after recovery. Local tests cannot replace these transactions.
+
+### Required screenshots
+
+The exact filenames and capture criteria are listed in [`docs/evidence/README.md`](./docs/evidence/README.md). Status: `NOT RUN`.
+
+---
+
+## V2 — rejected-delivery revision lifecycle
 
 This record documents the completed rejected-delivery revision lifecycle for the deployed ProofSponsor V2 contract. Local tests are listed separately and are not presented as GenLayer consensus evidence.
 

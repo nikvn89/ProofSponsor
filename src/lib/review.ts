@@ -79,7 +79,7 @@ export function safeEvidenceUrl(value: string): string | null {
 export async function loadAttempts(reader: AttemptReader, id: string, creator: string) {
   const count = Number(text(await reader.getAttemptCount(id, creator)))
   if (!Number.isInteger(count) || count < 1 || count > 3) {
-    throw new Error('V2 returned an invalid attempt count for this delivery.')
+    throw new Error('V3 returned an invalid attempt count for this delivery.')
   }
   return Promise.all(Array.from({ length: count }, async (_, index) => {
     const number = index + 1
@@ -90,8 +90,8 @@ export async function loadAttempts(reader: AttemptReader, id: string, creator: s
       reader.getAttemptReason(id, creator, number),
     ])
     const currentStatus = text(status)
-    if (!text(evidence) || !['SUBMITTED', 'APPROVED', 'REJECTED'].includes(currentStatus)) {
-      throw new Error(`V2 returned an incomplete attempt #${number}.`)
+    if (!text(evidence) || !['SUBMITTED', 'APPROVED', 'REJECTED', 'UNAVAILABLE'].includes(currentStatus)) {
+      throw new Error(`V3 returned an incomplete attempt #${number}.`)
     }
     return {
       number,
@@ -132,7 +132,7 @@ export async function loadReview(
   ])
   const status = text(statusValue)
   if (!status) throw new Error('No delivery found for this sponsorship and wallet.')
-  if (!['SUBMITTED', 'APPROVED', 'REJECTED'].includes(status)) {
+  if (!['SUBMITTED', 'APPROVED', 'REJECTED', 'UNAVAILABLE'].includes(status)) {
     throw new Error('The contract returned an unrecognized delivery status.')
   }
   const evidence = text(evidenceValue)
@@ -148,7 +148,7 @@ export async function loadReview(
 
   if (withAttempts && (!reader.getAttemptCount || !reader.getAttemptDescription ||
     !reader.getAttemptEvidence || !reader.getAttemptStatus || !reader.getAttemptReason)) {
-    throw new Error('V2 attempt methods are unavailable.')
+    throw new Error('V3 attempt methods are unavailable.')
   }
   const attempts = withAttempts ? await loadAttempts(reader as AttemptReader, id, creator) : []
 
@@ -157,7 +157,7 @@ export async function loadReview(
     source: {
       chain: 'GenLayer StudioNet',
       contract: contractAddress,
-      contractVersion: withAttempts ? '2' : '1',
+      contractVersion: withAttempts ? '3' : '1',
       state: 'accepted',
       retrievedAtUtc: retrievedAt.toISOString(),
     },

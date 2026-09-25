@@ -172,7 +172,7 @@ async function read(
 }
 
 /**
- * Poll AI-verification result until APPROVED / REJECTED.
+ * Poll AI-verification result until APPROVED / REJECTED / UNAVAILABLE.
  */
 export async function pollSubmissionStatus(
   campaignId: string,
@@ -211,7 +211,8 @@ export async function pollSubmissionStatus(
 
       if (
         status === 'APPROVED' ||
-        status === 'REJECTED'
+        status === 'REJECTED' ||
+        status === 'UNAVAILABLE'
       ) {
         return status
       }
@@ -391,6 +392,15 @@ export const sponsorJudge = {
 
   getAttemptReason: (campaignId: string, creator: string, attempt: number) =>
     read('get_attempt_reason', [campaignId, normalizeAddress(creator), attempt]) as Promise<string>,
+
+  getUnavailableRetries: (campaignId: string, creator: string) =>
+    read('get_unavailable_retries', [campaignId, normalizeAddress(creator)]) as Promise<number>,
+
+  getMaxUnavailableRetries: () =>
+    read('get_max_unavailable_retries', []) as Promise<number>,
+
+  normalizeEvidenceUrl: (evidenceUrl: string) =>
+    read('normalize_evidence_url', [evidenceUrl.trim()]) as Promise<string>,
 
   isEvidenceClaimed: (
     campaignId: string,

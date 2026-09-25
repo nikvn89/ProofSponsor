@@ -15,14 +15,41 @@ https://proofsponsor-gl.vercel.app/
 **GenLayer Studionet**
 
 ```text
-0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb
+V3 CONTRACT ADDRESS: TO BE RECORDED AFTER DEPLOYMENT
 ```
 
 Deployment transaction:
 
 ```text
-0x72ef78a2cf8bca501ae804efd5f6aa5e41228749e16a90cb302bbe11ce0d746a
+NOT RUN
 ```
+
+Do not submit the V3 milestone until the address, deployment transaction, and nine runtime rows in [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md) have been replaced with accepted StudioNet evidence.
+
+## Pre-deployment local gate — 2026-09-25
+
+| Gate | Actual result |
+| --- | --- |
+| `npm ci` | exit code 0; 289 packages installed |
+| `python3 -m unittest discover -s tests -v` | 19 tests, 0 failures |
+| `npm run build` | exit code 0; Vite production build completed in 5.44s |
+| `npm test` | 11 tests, 11 passed, 0 failed |
+| `python -m genvm_linter.cli lint contracts/ProofSponsorV3.py` | exit code 0; 3 checks passed |
+
+These gates validate local behavior and source shape only. They are not StudioNet consensus or deployment evidence.
+
+---
+
+# V3 load-bearing test — UNAVAILABLE → APPROVED
+
+1. Deploy `contracts/ProofSponsorV3.py` to StudioNet and configure the frontend with the fresh address and `VITE_CONTRACT_VERSION=3`.
+2. Create a campaign, obtain the creator marker, and prepare a public route containing the marker—but leave that route unpublished so it returns 404.
+3. Submit the unpublished HTTPS URL. Confirm accepted state is `SUBMITTED` and `attempt_count` is `1`.
+4. Call **Verify delivery with GenLayer**. Confirm accepted state becomes `UNAVAILABLE`, the UI is amber, **Verify again** is visible, `attempt_count` remains `1`, and retrieval retries is `1 of 5`.
+5. Publish the prepared page at exactly the submitted URL and click **Verify again**. Confirm `APPROVED` while `attempt_count` still equals `1`.
+6. Record every transaction hash and capture `v3-after-unavailable.png` and `v3-after-recovered.png` under `docs/evidence/`.
+
+Also verify URL identity visibly: enter `https://WWW.Example.org/Post/?utm_source=x#top` and confirm the UI shows `Recorded as: https://example.org/Post`. Meaningful query values must remain distinct: `?v=A` and `?v=B` must not normalize to the same URL.
 
 ---
 
@@ -417,7 +444,7 @@ This demonstrates the core GenLayer use case of ProofSponsor: decentralized adju
 
 # V2 milestone — rejected-delivery revision
 
-The two tests above are also valid baseline checks against V2. The milestone-specific revision path below targets the separate V2 deployment shown at the top of this guide. Deployment, schema, and the rejected-to-revised behavior have been verified on StudioNet. The completed reference run is documented in [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md); the steps below remain the reproducible reviewer path.
+The two tests above are also valid baseline checks against the historical V2 contract at `0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb`. Deployment, schema, and the rejected-to-revised behavior were verified on StudioNet. The completed reference run is documented in [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md); the steps below remain the reproducible V2 path.
 
 ## Completed StudioNet reference run
 
@@ -438,4 +465,4 @@ The final approved judgment is `0xce7c4ed63bb1409705f2d5f03714887adfee5e173fdb58
 5. Connect the original creator wallet. Publish a **different** HTTPS page with the same creator's marker and substantive content meeting the brief. Use **Revise rejected delivery** to submit its new URL. Confirm `SUBMITTED`, count `2`, and that attempt #1's rejected URL/reason remain unchanged.
 6. Request judgment again and wait for an accepted `APPROVED` or `REJECTED`. If approved, confirm attempt #2's status, final reason, and `is_evidence_claimed`/`get_evidence_claimed_by`. A revision after `APPROVED` must be refused. If rejected again, attempt #3 is possible, but a fourth must be refused.
 7. Open the public `/#/review` page with this real campaign ID and creator wallet, without connecting a wallet. Compare its full attempt history with accepted contract reads and save the link and JSON. An external page can change; this record is not a signed historical receipt.
-8. Preserve transaction hashes, accepted read outputs, before/after screenshots, Git diff, and test output. Local tests: `python3 -m unittest discover -s tests -p 'test_contract_v2.py' -v`, `npm test`, `npm run build`. **Do not submit a live V2 claim based only on these local tests.**
+8. Preserve transaction hashes, accepted read outputs, before/after screenshots, Git diff, and test output. Local tests: `python3 -m unittest discover -s tests -v`, `npm test`, `npm run build`. **Do not submit a live contract claim based only on local tests.**

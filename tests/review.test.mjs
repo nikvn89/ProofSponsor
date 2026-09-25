@@ -129,19 +129,53 @@ test('does not turn an untrusted onchain URL into a script or non-HTTPS link', (
   assert.equal(safeEvidenceUrl('https://example.org/article'), 'https://example.org/article')
 })
 
-test('loads the immutable sequence of V2 attempts into the shareable dossier', async () => {
+test('loads the immutable sequence of V3 attempts into the shareable dossier', async () => {
   const reader = mockV2Reader()
   const review = await loadReview(reader, 'case-1', creator, contract, new Date('2026-09-12T12:00:00Z'), true)
-  assert.equal(review.source.contractVersion, '2')
+  assert.equal(review.source.contractVersion, '3')
   assert.deepEqual(review.attempts.map((attempt) => attempt.status), ['REJECTED', 'APPROVED'])
   assert.equal(review.attempts[0].reason, 'Not sufficient.')
   assert.equal(review.attempts[1].evidence, 'https://example.org/2')
   assert.equal(review.inconsistent, false)
 })
 
-test('fails closed for invalid V2 history or a mismatched latest attempt', async () => {
+test('fails closed for invalid V3 history or a mismatched latest attempt', async () => {
   await assert.rejects(loadAttempts(mockV2Reader({ getAttemptCount: async () => 4 }), 'case-1', creator), /invalid attempt count/)
   await assert.rejects(loadAttempts(mockV2Reader({ getAttemptStatus: async () => '' }), 'case-1', creator), /incomplete attempt/)
   const review = await loadReview(mockV2Reader({ getAttemptStatus: async () => 'REJECTED' }), 'case-1', creator, contract, new Date(), true)
   assert.equal(review.inconsistent, true)
+})
+
+test('accepts UNAVAILABLE while still rejecting unknown delivery states', async () => {
+  const unavailable = mockV2Reader({
+    getSubmissionStatus: async () => 'UNAVAILABLE',
+    getAttemptCount: async () => 1,
+    getAttemptStatus: async () => 'UNAVAILABLE',
+    getAttemptReason: async () => 'Evidence could not be retrieved.',
+    isEvidenceClaimed: async () => false,
+    getEvidenceClaimedBy: async () => '',
+  })
+  const review = await loadReview(
+    unavailable,
+    'case-1',
+    creator,
+    contract,
+    new Date('2026-09-25T00:00:00Z'),
+    true,
+  )
+  assert.equal(review.submission.status, 'UNAVAILABLE')
+  assert.equal(review.attempts[0].status, 'UNAVAILABLE')
+  assert.equal(review.inconsistent, false)
+
+  await assert.rejects(
+    loadReview(
+      mockV2Reader({ getSubmissionStatus: async () => 'NETWORK_ERROR' }),
+      'case-1',
+      creator,
+      contract,
+      new Date(),
+      true,
+    ),
+    /unrecognized delivery status/,
+  )
 })

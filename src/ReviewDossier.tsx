@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft, Clipboard, Download, ExternalLink, LoaderCircle, Search } from 'lucide-react'
 import StatusPill from './components/StatusPill'
-import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V2_CONFIG_ERROR } from './lib/config'
+import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V3_CONFIG_ERROR } from './lib/config'
 import { sponsorJudge } from './lib/genlayer'
 import {
   loadReview,
@@ -114,7 +114,7 @@ export default function ReviewDossier() {
           </button>
         </form>
 
-        {V2_CONFIG_ERROR && <p className="review-error" role="alert">V2 requires its newly deployed contract address. This page is reading the original V1 contract.</p>}
+        {V3_CONFIG_ERROR && <p className="review-error" role="alert">V3 requires a fresh deployed contract address. Replace the zero-address placeholder before reading cases.</p>}
 
         {error && <p className="review-error" role="alert">{error}</p>}
         {feedback && <p className="review-feedback" role="status">{feedback}</p>}
@@ -175,7 +175,7 @@ export default function ReviewDossier() {
                   {safeEvidenceUrl(attempt.evidence) ?
                     <a href={safeEvidenceUrl(attempt.evidence)!} target="_blank" rel="noopener noreferrer">{attempt.evidence} <ExternalLink size={12} /></a> :
                     <code>{attempt.evidence}</code>}
-                  {attempt.reason && <p>Reason: {attempt.reason}</p>}
+                  {attempt.reason && <p>{attempt.status === 'UNAVAILABLE' ? 'Retrieval: ' : 'Reason: '}{attempt.reason}</p>}
                 </li>)}
               </ol>
             </section>}
