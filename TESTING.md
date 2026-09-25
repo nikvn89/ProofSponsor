@@ -15,16 +15,18 @@ https://proofsponsor-gl.vercel.app/
 **GenLayer Studionet**
 
 ```text
-V3 CONTRACT ADDRESS: TO BE RECORDED AFTER DEPLOYMENT
+V3 CONTRACT ADDRESS: 0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
 ```
 
 Deployment transaction:
 
 ```text
-NOT RUN
+0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3
 ```
 
-Do not submit the V3 milestone until the address, deployment transaction, and nine runtime rows in [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md) have been replaced with accepted StudioNet evidence.
+- Contract: https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
+- Deployment: https://explorer-studio.genlayer.com/tx/0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3
+- Source SHA-256: `932cd6f3bc6176c4d416d3870ef9123d313217bdfb1843bf427adc1021f59394`
 
 ## Pre-deployment local gate — 2026-09-25
 
@@ -41,6 +43,20 @@ These gates validate local behavior and source shape only. They are not StudioNe
 ---
 
 # V3 load-bearing test — UNAVAILABLE → APPROVED
+
+## Completed StudioNet reference run — 2026-09-25
+
+- Campaign: `v3-recovery-250925-01`
+- Creator: `0x6276095FAEA15108740445ff277fdA8c304657F4`
+- Public evidence: https://nikvn89.github.io/ProofSponsor/evidence/v3-recovery-250925-01.html
+- Campaign creation: https://explorer-studio.genlayer.com/tx/0x0919e09a50b318b475949944ea544afa965138dbfdce2f5fabd61484237dc129
+- Recovery judgment: https://explorer-studio.genlayer.com/tx/0x00485f692240ae82f52ffbe067683669f6ceb281f8432c3f77a00631258623f7
+- Initial accepted result: `UNAVAILABLE`; `Attempt 1 of 3 preserved`; retrieval retries `1 of 5`
+- Final accepted result: `APPROVED`; attempt history remained `1/3`
+
+The before/after UI and finalized recovery transaction are retained in [`docs/evidence`](./docs/evidence/README.md). The exact submit transaction and first judgment hash were not retained in the supplied captures, so this guide does not invent them. The accepted-state screenshots document those intermediate states; the final recovery transaction is linked above.
+
+## Reproduction path
 
 1. Deploy `contracts/ProofSponsorV3.py` to StudioNet and configure the frontend with the fresh address and `VITE_CONTRACT_VERSION=3`.
 2. Create a campaign, obtain the creator marker, and prepare a public route containing the marker—but leave that route unpublished so it returns 404.
@@ -466,14 +482,3 @@ The final approved judgment is `0xce7c4ed63bb1409705f2d5f03714887adfee5e173fdb58
 6. Request judgment again and wait for an accepted `APPROVED` or `REJECTED`. If approved, confirm attempt #2's status, final reason, and `is_evidence_claimed`/`get_evidence_claimed_by`. A revision after `APPROVED` must be refused. If rejected again, attempt #3 is possible, but a fourth must be refused.
 7. Open the public `/#/review` page with this real campaign ID and creator wallet, without connecting a wallet. Compare its full attempt history with accepted contract reads and save the link and JSON. An external page can change; this record is not a signed historical receipt.
 8. Preserve transaction hashes, accepted read outputs, before/after screenshots, Git diff, and test output. Local tests: `python3 -m unittest discover -s tests -v`, `npm test`, `npm run build`. **Do not submit a live contract claim based only on local tests.**
-
-## V3 Runtime Recovery Verification
-
-- Contract: https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
-- Campaign ID: `v3-recovery-250925-01`
-- Public evidence: https://nikvn89.github.io/ProofSponsor/evidence/v3-recovery-250925-01.html
-- Initial result: `UNAVAILABLE`
-- Recovery transaction: https://explorer-studio.genlayer.com/tx/0x00485f692240ae82f52ffbe067683669f6ceb281f8432c3f77a00631258623f7
-- Final result: `APPROVED`
-- Attempt preservation: `Attempt 1 of 3`
-- Verified behavior: temporarily unavailable evidence can be retried without consuming a new submission attempt.

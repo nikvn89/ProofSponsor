@@ -21,12 +21,12 @@ https://github.com/nikvn89/ProofSponsor
 **Network:** GenLayer Studionet
 
 ```text
-V3 CONTRACT ADDRESS: TO BE RECORDED AFTER DEPLOYMENT
-V3 DEPLOYMENT TX: TO BE RECORDED AFTER DEPLOYMENT
-ProofSponsorV3.py SHA-256: TO BE RECORDED AFTER DEPLOYMENT
+V3 CONTRACT ADDRESS: 0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
+V3 DEPLOYMENT TX: 0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3
+ProofSponsorV3.py SHA-256: 932cd6f3bc6176c4d416d3870ef9123d313217bdfb1843bf427adc1021f59394
 ```
 
-V3 changes the contract and therefore requires a fresh StudioNet deployment and fresh runtime evidence. Do not point the production app at the zero-address placeholder in `.env.example`.
+The deployed contract is available in the [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A), and the deployment transaction is [finalized and successful](https://explorer-studio.genlayer.com/tx/0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3). Production is configured with this address and `VITE_CONTRACT_VERSION=3`. `.env.example` intentionally retains a zero-address placeholder.
 
 The previous V2 contract remains readable at [`0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb`](https://explorer-studio.genlayer.com/address/0xcD38Ed017A9cC3351C14c78c562bDB02194aE2bb), with source SHA-256 `8cc60cc93b195679172b8a6240d24f54a87be6c40be70784ba061e8f4775df3f`. V3 starts with empty storage: campaign `ps-v2-live-1309-01.` and other V2 records are not migrated.
 
@@ -242,7 +242,7 @@ npm test
 
 V3 also canonicalizes common URL variants before storing attempted/claimed keys. It removes fragments and known tracking parameters, normalizes scheme/host/`www`, preserves path case, and keeps meaningful query parameters such as `?v=`. This is best-effort URL identity, not content identity; see [SECURITY.md](./SECURITY.md) for the remaining limitation.
 
-The contract changed, so local tests are not runtime proof. Before submission, deploy V3, replace the placeholder address, complete all nine rows in [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md), and capture the four screenshots listed in [`docs/evidence`](./docs/evidence/README.md).
+The load-bearing StudioNet recovery run is complete. Campaign `v3-recovery-250925-01` first reached `UNAVAILABLE` while its evidence page returned 404, preserving **Attempt 1 of 3** with retrieval retry `1 of 5`. After the same URL was published, a second `judge_content` call reached `APPROVED` without creating another attempt. See [RUNTIME_EVIDENCE.md](./RUNTIME_EVIDENCE.md) and the retained [`docs/evidence`](./docs/evidence/README.md) screenshots. Additional deterministic URL-identity and authorization cases are covered by local tests and are explicitly distinguished from live StudioNet evidence.
 
 Run the complete local gate:
 
@@ -308,11 +308,11 @@ npm run build
 Create `.env` from `.env.example`.
 
 ```text
-VITE_CONTRACT_ADDRESS=<fresh V3 address>
+VITE_CONTRACT_ADDRESS=0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
 VITE_CONTRACT_VERSION=3
 ```
 
-Do not commit `.env`, `.env.local`, or `.env.production`. Configure production values in the deployment platform. `.env.example` intentionally contains the zero-address placeholder until V3 is deployed.
+Do not commit `.env`, `.env.local`, or `.env.production`. Configure production values in the deployment platform. `.env.example` intentionally retains a zero-address placeholder so a clone never silently targets the live contract.
 
 ## Vercel Deployment
 
@@ -325,7 +325,7 @@ Output Directory: dist
 Environment variable:
 
 ```text
-VITE_CONTRACT_ADDRESS=<fresh V3 address>
+VITE_CONTRACT_ADDRESS=0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
 VITE_CONTRACT_VERSION=3
 ```
 

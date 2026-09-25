@@ -10,6 +10,14 @@ Extract the delivery ZIP, then upload the files and folders at its root to the e
 - `MILESTONE_SUBMISSION.md`
 - `.github/workflows/ci.yml`
 - `docs/evidence/README.md`
+- `docs/evidence/v3-recovery-250925-01.html`
+- `docs/evidence/v3-contract-deployment.png`
+- `docs/evidence/v3-create-campaign-tx.png`
+- `docs/evidence/v3-before-verification.png`
+- `docs/evidence/v3-after-unavailable.png`
+- `docs/evidence/v3-public-evidence.png`
+- `docs/evidence/v3-final-judgment-tx.png`
+- `docs/evidence/v3-after-recovered.png`
 
 ## Replace
 
@@ -41,4 +49,4 @@ Do not delete or replace `contracts/ProofSponsor.py` or `contracts/ProofSponsorV
 - `contracts/ProofSponsorV2.py`: `8cc60cc93b195679172b8a6240d24f54a87be6c40be70784ba061e8f4775df3f`
 - `contracts/ProofSponsorV3.py`: `932cd6f3bc6176c4d416d3870ef9123d313217bdfb1843bf427adc1021f59394`
 
-After deploying this exact V3 source, copy its address, deploy transaction, and SHA into `README.md`, `CHANGELOG.md`, and `RUNTIME_EVIDENCE.md`; replace the zero address in `.env.example` and production environment configuration.
+The exact V3 source is deployed at `0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A`; its deployment transaction and runtime recovery evidence are recorded in `README.md`, `CHANGELOG.md`, and `RUNTIME_EVIDENCE.md`. Keep the zero address in `.env.example` so a repository clone never implies a production target. Configure `VITE_CONTRACT_ADDRESS` and `VITE_CONTRACT_VERSION=3` only in the deployment platform.

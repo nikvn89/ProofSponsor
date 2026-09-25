@@ -2,36 +2,39 @@
 
 ## V3 — retrieval-safe adjudication
 
-V3 changes the contract and must be deployed separately. The rows below are deliberately marked `NOT RUN` in this pre-deployment package. Replace each marker only after the corresponding StudioNet transaction is accepted, and link the exact transaction.
+V3 was deployed separately and exercised on StudioNet. The load-bearing milestone behavior—recovering one preserved attempt from `UNAVAILABLE` to `APPROVED`—was completed against accepted contract state. This record distinguishes linked onchain transactions, retained accepted-state screenshots, and local-only regressions; it does not promote a local test into runtime evidence.
 
 ### Deployment and source
 
 - Network: GenLayer StudioNet (`61999`)
-- Contract: `TO BE RECORDED AFTER DEPLOYMENT`
-- Deployment transaction: `NOT RUN`
+- Contract: [`0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A`](https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A)
+- Deployment transaction: [`0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3`](https://explorer-studio.genlayer.com/tx/0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3) — `FINALIZED / SUCCESS / Accepted`
 - Contract source: `contracts/ProofSponsorV3.py`
-- Source SHA-256: `TO BE RECORDED AFTER DEPLOYMENT`
-- Runtime campaign: `TO BE RECORDED AFTER DEPLOYMENT`
+- Source SHA-256: `932cd6f3bc6176c4d416d3870ef9123d313217bdfb1843bf427adc1021f59394`
+- Runtime campaign: `v3-recovery-250925-01`
+- Sponsor/creator wallet: `0x6276095FAEA15108740445ff277fdA8c304657F4`
+- Required marker: `SPONSORJUDGE_PROOF:0x6276095faea15108740445ff277fda8c304657f4`
+- Public evidence: https://nikvn89.github.io/ProofSponsor/evidence/v3-recovery-250925-01.html
 
-### Required V3 runtime matrix
+### V3 verification matrix
 
-| # | Action | Required accepted result | Transaction evidence |
+| # | Action | Observed or tested result | Evidence and scope |
 | --- | --- | --- | --- |
-| 1 | Deploy `ProofSponsorV3.py` | Fresh V3 address | `NOT RUN` |
-| 2 | `create_campaign` | Campaign is active | `NOT RUN` |
-| 3 | `submit_content` while the evidence route is still unpublished/404 | `SUBMITTED`; `attempt_count = 1` | `NOT RUN` |
-| 4 | `judge_content` while retrieval fails | `UNAVAILABLE`; `attempt_count = 1`; retries = 1 | `NOT RUN` |
-| 5 | Publish the page, then call `judge_content` again | `APPROVED`; `attempt_count = 1` | `NOT RUN` |
-| 6 | Creator B submits a tracking variant of Creator A's claimed page | Revert: `evidence already claimed` | `NOT RUN` |
-| 7 | Creator A revises with a fragment variant of its attempted URL | Revert: `creator already used this evidence URL` | `NOT RUN` |
-| 8 | Complete `REJECTED -> revise -> APPROVED` on V3 | Immutable multi-attempt history | `NOT RUN` |
-| 9 | Read `normalize_evidence_url` with a dirty URL | Canonical URL returned | `NOT RUN` |
+| 1 | Deploy `ProofSponsorV3.py` | Fresh V3 contract finalized successfully | [Deployment transaction](https://explorer-studio.genlayer.com/tx/0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3) and [`v3-contract-deployment.png`](./docs/evidence/v3-contract-deployment.png) |
+| 2 | `create_campaign` | Campaign `v3-recovery-250925-01` is active | [Accepted transaction](https://explorer-studio.genlayer.com/tx/0x0919e09a50b318b475949944ea544afa965138dbfdce2f5fabd61484237dc129) and [`v3-create-campaign-tx.png`](./docs/evidence/v3-create-campaign-tx.png) |
+| 3 | `submit_content` while the exact evidence route was unpublished/404 | Accepted state showed `SUBMITTED`; `attempt_count = 1` | [`v3-before-verification.png`](./docs/evidence/v3-before-verification.png). The exact submit hash was not retained in the supplied capture. |
+| 4 | `judge_content` while retrieval failed | Accepted state showed `UNAVAILABLE`; attempt remained `1`; retries = `1 of 5` | [`v3-after-unavailable.png`](./docs/evidence/v3-after-unavailable.png). The exact first-judgment hash was not retained in the supplied capture. |
+| 5 | Publish the same page, then call `judge_content` again | `APPROVED`; attempt history remained `1/3` | [Finalized recovery judgment](https://explorer-studio.genlayer.com/tx/0x00485f692240ae82f52ffbe067683669f6ceb281f8432c3f77a00631258623f7), [`v3-final-judgment-tx.png`](./docs/evidence/v3-final-judgment-tx.png), and [`v3-after-recovered.png`](./docs/evidence/v3-after-recovered.png) |
+| 6 | Creator B submits a tracking variant of Creator A's claimed page | Expected revert: `evidence already claimed` | Local regression `test_09_claimed_page_variant_is_blocked_for_second_creator`; not repeated as a V3 StudioNet transaction |
+| 7 | Creator A revises with a fragment variant of its attempted URL | Expected revert: `creator already used this evidence URL` | Local regression `test_07_fragment_variant_of_attempted_url_is_blocked`; not repeated as a V3 StudioNet transaction |
+| 8 | Complete `REJECTED -> revise -> APPROVED` on V3 | V3 retains the V2 revision state machine | Not repeated on V3 StudioNet. The completed historical V2 lifecycle is recorded below; V3 unit tests cover recovery/revision interaction. |
+| 9 | Read `normalize_evidence_url` with a dirty URL | Canonical URL returned while meaningful query values stay distinct | Local regressions `test_10_resource_query_values_remain_distinct` and `test_11_normalize_view_exposes_canonical_url`; not claimed as a StudioNet accepted read |
 
-Rows 4 and 5 are the load-bearing proof: they must show the same attempt count before and after recovery. Local tests cannot replace these transactions.
+Rows 4 and 5 are the load-bearing proof for this milestone. They show the same attempt before and after recovery: `UNAVAILABLE` did not consume a new attempt, and the finalized retry returned `APPROVED`. Rows 6–9 are intentionally labeled local or historical where no V3 StudioNet transaction was retained.
 
-### Required screenshots
+### Retained screenshots
 
-The exact filenames and capture criteria are listed in [`docs/evidence/README.md`](./docs/evidence/README.md). Status: `NOT RUN`.
+The exact filenames, contents, and limitations are listed in [`docs/evidence/README.md`](./docs/evidence/README.md). The screenshots are supporting evidence; Explorer transactions and accepted contract state remain authoritative.
 
 ---
 
