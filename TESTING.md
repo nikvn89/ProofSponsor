@@ -466,3 +466,14 @@ The final approved judgment is `0xce7c4ed63bb1409705f2d5f03714887adfee5e173fdb58
 6. Request judgment again and wait for an accepted `APPROVED` or `REJECTED`. If approved, confirm attempt #2's status, final reason, and `is_evidence_claimed`/`get_evidence_claimed_by`. A revision after `APPROVED` must be refused. If rejected again, attempt #3 is possible, but a fourth must be refused.
 7. Open the public `/#/review` page with this real campaign ID and creator wallet, without connecting a wallet. Compare its full attempt history with accepted contract reads and save the link and JSON. An external page can change; this record is not a signed historical receipt.
 8. Preserve transaction hashes, accepted read outputs, before/after screenshots, Git diff, and test output. Local tests: `python3 -m unittest discover -s tests -v`, `npm test`, `npm run build`. **Do not submit a live contract claim based only on local tests.**
+
+## V3 Runtime Recovery Verification
+
+- Contract: https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
+- Campaign ID: `v3-recovery-250925-01`
+- Public evidence: https://nikvn89.github.io/ProofSponsor/evidence/v3-recovery-250925-01.html
+- Initial result: `UNAVAILABLE`
+- Recovery transaction: https://explorer-studio.genlayer.com/tx/0x00485f692240ae82f52ffbe067683669f6ceb281f8432c3f77a00631258623f7
+- Final result: `APPROVED`
+- Attempt preservation: `Attempt 1 of 3`
+- Verified behavior: temporarily unavailable evidence can be retried without consuming a new submission attempt.
