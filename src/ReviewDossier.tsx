@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft, Clipboard, Download, ExternalLink, LoaderCircle, Search } from 'lucide-react'
 import StatusPill from './components/StatusPill'
-import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V3_CONFIG_ERROR } from './lib/config'
+import { CONFIG_ERROR, CONTRACT_ADDRESS, CONTRACT_VERSION, EXPLORER_BASE, REVISION_ENABLED, TREASURY_ENABLED } from './lib/config'
 import { sponsorJudge } from './lib/genlayer'
 import {
   loadReview,
@@ -28,7 +28,7 @@ export default function ReviewDossier() {
     setError('')
     setFeedback('')
     try {
-      setReview(await loadReview(sponsorJudge, id, wallet, CONTRACT_ADDRESS, new Date(), REVISION_ENABLED))
+      setReview(await loadReview(sponsorJudge, id, wallet, CONTRACT_ADDRESS, new Date(), REVISION_ENABLED, CONTRACT_VERSION, TREASURY_ENABLED))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not read accepted contract state.')
     } finally {
@@ -114,7 +114,7 @@ export default function ReviewDossier() {
           </button>
         </form>
 
-        {V3_CONFIG_ERROR && <p className="review-error" role="alert">V3 requires a fresh deployed contract address. Replace the zero-address placeholder before reading cases.</p>}
+        {CONFIG_ERROR && <p className="review-error" role="alert">Contract version {CONTRACT_VERSION} needs its own deployed address. Set VITE_CONTRACT_ADDRESS before reading cases.</p>}
 
         {error && <p className="review-error" role="alert">{error}</p>}
         {feedback && <p className="review-feedback" role="status">{feedback}</p>}
@@ -180,8 +180,17 @@ export default function ReviewDossier() {
               </ol>
             </section>}
 
+            {TREASURY_ENABLED && <section className="review-section">
+              <span className="overline">05 / Reward</span>
+              <h3>{review.payout ? <StatusPill status={review.payout.status} /> : null} {review.payout ? review.payout.pending : 'No reward recorded'}</h3>
+              <dl className="review-facts">
+                <div><dt>Payout status</dt><dd>{review.payout?.status || 'None — the delivery has no approved reward yet'}</dd></div>
+                {review.payout?.claimBy && <div><dt>Claim by</dt><dd>{review.payout.claimBy}{review.payout.expired ? ' (window closed)' : ''}</dd></div>}
+              </dl>
+            </section>}
+
             <section className="review-section review-boundary">
-              <span className="overline">{REVISION_ENABLED ? '05' : '04'} / Review boundary</span>
+              <span className="overline">{TREASURY_ENABLED ? '06' : REVISION_ENABLED ? '05' : '04'} / Review boundary</span>
               <h3>What this record does not prove</h3>
               <ul>{review.limitations.map((limit) => <li key={limit}>{limit}</li>)}</ul>
               <a href={`${EXPLORER_BASE}/address/${CONTRACT_ADDRESS}`} target="_blank" rel="noopener noreferrer">Inspect deployed contract <ExternalLink size={13} /></a>

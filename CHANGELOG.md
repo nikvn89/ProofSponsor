@@ -1,5 +1,24 @@
 # Changelog
 
+## V4 contract generation — the verdict pays (4.0.0)
+
+- Added `contracts/ProofSponsorV4.py` (`SponsorJudgeV4`). V1–V3 source files are unchanged.
+- **Funded rewards.** `create_campaign` takes `reward_wei`; `fund_campaign` (payable, sponsor only) fills the campaign pool. An `APPROVED` verdict reserves the reward if the pool covers it, otherwise records `UNDERFUNDED`.
+- **Payouts.** `withdraw_reward` pays the creator once. `reserve_underfunded` lets anyone reserve a waiting reward once the pool covers it. Reservations last 30 days; `release_expired_reward` returns an unclaimed one to the pool.
+- **Reclaim.** `reclaim_unused` returns only unreserved GEN to the sponsor, after closing, with no delivery awaiting a verdict and no approved reward waiting for funds.
+- **Closing no longer blocks a verdict.** Deliveries submitted while the campaign was open can be judged after it closes.
+- **Prompt fence.** The creator description is now fenced too, and markers are stripped in any case to a fixed point.
+- **Views.** `get_contract_info`, `get_campaign_treasury` and `get_payout`; wei amounts are decimal strings.
+- **App.** Reward field on create; treasury panel with fund, close/reopen and reclaim (with the reason it is blocked); payout box with claim deadline, withdraw, reserve and release; reward section on the public review page. Wallet writes switch networks with standard wallet RPC (no Snap) and are confirmed from the leader receipt; reverts show the contract's sentence. Bundle split into react / genlayer / vendor chunks.
+- **Tests.** `tests/direct/`: 51 GenVM Direct Mode tests on the real py-genlayer v0.2.16 SDK (48 for V4, 3 reproducing the V3 weaknesses on V3). `tests/mutation_check.py`: 45 mutants, all killed. New Node tests for amounts, payout states, reclaim reasons and receipts (27 in total). CI runs all of them.
+
+### Deployment boundary
+
+- V4 address: ⟨V4 address⟩
+- V4 deployment transaction: ⟨V4 deploy tx⟩
+- V4 source SHA-256: `ed907ccd352ccf17ff3b9db3ecef0312085e0f2e711b1ac8b447f2a8607dd052`
+- V4 starts with empty storage; V3 records stay readable at `0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A`.
+
 ## V3 contract generation — DEPLOYED AND RECOVERY-VERIFIED
 
 - Added `contracts/ProofSponsorV3.py`. Retrieval exceptions, `None`, and empty rendered content now produce `UNAVAILABLE` instead of a false content rejection. The current attempt remains intact and can be verified again; five consecutive retrieval failures close it as `REJECTED`.

@@ -443,3 +443,26 @@ input::placeholder,textarea::placeholder{color:#a9b5ad}
   .review-facts div{grid-template-columns:1fr;gap:3px}
   .review-actions .action{flex:1 1 auto}
 }
+
+/* V4 — reward treasury and payouts */
+.treasury{margin-top:14px;padding:14px;border:1px solid #dae3d9;border-radius:14px;background:#f7faf6}
+.treasury-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:#52685a}
+.treasury-head span{display:inline-flex;align-items:center;gap:6px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.treasury-head strong{color:#1f3a2b}
+.treasury-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 6px}
+.treasury-grid div{background:#fff;border:1px solid #e3eae2;border-radius:10px;padding:8px 10px;min-width:0}
+.treasury-grid dt{font-size:10px;color:#64786a}
+.treasury-grid dd{margin:2px 0 0;font-weight:800;color:#1f3a2b;font-size:13px;overflow-wrap:anywhere}
+.treasury-note{display:block;margin:6px 0 0;font-size:11px;color:#64786a}
+.sponsor-actions{margin-top:12px;display:grid;gap:8px}
+.sponsor-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.sponsor-buttons .action{flex:1 1 160px}
+.payout-box{margin:14px 0;padding:14px;border-radius:14px;border:1px solid #cce5d1;background:#eef7ef}
+.payout-box.warn{border-color:#ead18b;background:#fff6dc}
+.payout-box.neutral{border-color:#dae3d9;background:#f4f7f3}
+.payout-head{display:flex;gap:10px;align-items:flex-start;color:#2c6b41}
+.payout-box.warn .payout-head{color:#7b5a12}
+.payout-box.neutral .payout-head{color:#52685a}
+.payout-head p{margin:3px 0 0;font-size:12px;line-height:1.5}
+.payout-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+@media (max-width:640px){.treasury-grid{grid-template-columns:1fr}}

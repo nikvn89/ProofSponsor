@@ -12,23 +12,71 @@ https://proofsponsor-gl.vercel.app/
 
 ## Contract
 
-**GenLayer Studionet**
+**GenLayer Studionet — V4 (current)**
 
 ```text
-V3 CONTRACT ADDRESS: 0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
+V4 CONTRACT ADDRESS: ⟨V4 address⟩
 ```
 
-Deployment transaction:
+- Deployment: ⟨V4 deploy tx⟩
+- Source SHA-256 (`contracts/ProofSponsorV4.py`): `ed907ccd352ccf17ff3b9db3ecef0312085e0f2e711b1ac8b447f2a8607dd052`
+
+The previous generation, V3, stays readable at [`0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A`](https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A) (deployment `0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3`, SHA-256 `932cd6f3bc6176c4d416d3870ef9123d313217bdfb1843bf427adc1021f59394`).
+
+## V4 local gate — 2026-10-06
+
+| Gate | Actual result |
+| --- | --- |
+| `python -m pytest tests/direct -q -p no:cacheprovider` | 51 passed (48 on V4, 3 reproducing V3 weaknesses on V3) |
+| `python tests/mutation_check.py` | 45/45 mutants killed |
+| `python -m unittest discover -s tests -v` | 19 tests, 0 failures (V2/V3 suites) |
+| `python -m genvm_linter.cli lint contracts/ProofSponsorV4.py` | 3 checks passed; `typecheck` reports no type errors |
+| `npm ci && npm run build` | exit code 0; largest chunk 291 kB, no size warning |
+| `npm test` | 27 tests, 27 passed |
+
+Direct Mode runs the contract on the real GenVM SDK with mocked pages and model answers; it is not StudioNet consensus evidence. The StudioNet run is below.
+
+---
+
+# V4 load-bearing test — the verdict pays
+
+Two wallets:
+
+- **Sponsor S:** `0x6276095FAEA15108740445ff277fdA8c304657F4`
+- **Creator C:** `0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE`
+
+Public evidence for C (contains C's marker): https://nikvn89.github.io/ProofSponsor/evidence/v4-delivery-a.html
+
+Campaign ID: `v4-pay-061026` · Title: `ProofSponsor payout explainer`
+
+Brief:
 
 ```text
-0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3
+Publish a public explainer page that describes how ProofSponsor pays a creator: the sponsor funds a reward pool, validators approve the delivery, the reward is reserved for the creator and withdrawn by the creator, and an unclaimed reward expires back to the pool. The page must include the creator wallet marker.
 ```
 
-- Contract: https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A
-- Deployment: https://explorer-studio.genlayer.com/tx/0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3
-- Source SHA-256: `932cd6f3bc6176c4d416d3870ef9123d313217bdfb1843bf427adc1021f59394`
+Delivery note:
 
-## Pre-deployment local gate — 2026-09-25
+```text
+Published an explainer of the V4 payout flow: funded pool, reservation on approval, creator withdrawal and the 30-day expiry.
+```
+
+| # | Wallet | Action | Expected | Result / tx |
+| --- | --- | --- | --- | --- |
+| 1 | S | Deploy `ProofSponsorV4.py` | `FINALIZED`, `SUCCESS` | ⟨tx⟩ |
+| 2 | S | Create the campaign with reward `1` GEN | Treasury: reward 1 GEN, pool 0 | ⟨tx⟩ |
+| 3 | S | **Fund pool** `1.5` GEN | Pool 1.5 GEN, available 1.5 GEN | ⟨tx⟩ |
+| 4 | C | Submit the delivery note and the evidence URL | `SUBMITTED`; 1 awaiting a verdict | ⟨tx⟩ |
+| 5 | S | **Close campaign** | Campaign `CLOSED` | ⟨tx⟩ |
+| 6 | S | **Verify delivery with GenLayer** (campaign is closed) | `APPROVED`; payout `1 GEN reserved`, claim by row-6 date + 30 days; reserved 1, available 0.5 | ⟨tx⟩ |
+| 7 | S | **Reclaim** | 0.5 GEN back to S; pool 1, reserved 1, available 0 | ⟨tx⟩ |
+| 8 | S | Studio: `release_expired_reward("v4-pay-061026", C)` | Revert `claim window is still open` (by design) | ⟨tx⟩ |
+| 9 | C | **Withdraw reward** | Payout `PAID`; pool 0; 1 GEN sent to C | ⟨tx⟩ |
+| 10 | C | Studio: `withdraw_reward("v4-pay-061026")` again | Revert `no reserved reward to withdraw` (by design) | ⟨tx⟩ |
+
+Row 6 is the closing-cannot-dodge proof (V3 reverted `campaign is closed` here). Rows 7–9 show that the sponsor's reclaim leaves the creator's reserved GEN untouched and that the creator is paid once. Underfunded reservation and the 30-day expiry are covered by Direct Mode tests, because a real run would need a month.
+
+## V3 pre-deployment local gate — 2026-09-25
 
 | Gate | Actual result |
 | --- | --- |

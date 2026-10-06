@@ -12,6 +12,10 @@ export type ReviewReader = {
   getEvidenceClaimedBy(id: string, evidence: string): Promise<string>
 }
 
+export type PayoutReader = {
+  getPayout(id: string, creator: string): Promise<string>
+}
+
 export type AttemptReader = {
   getAttemptCount(id: string, creator: string): Promise<number>
   getAttemptDescription(id: string, creator: string, attempt: number): Promise<string>
@@ -19,6 +23,8 @@ export type AttemptReader = {
   getAttemptStatus(id: string, creator: string, attempt: number): Promise<string>
   getAttemptReason(id: string, creator: string, attempt: number): Promise<string>
 }
+
+import { dayToDate, formatGen, parsePayout } from './treasury.ts'
 
 const limitations = [
   'This snapshot contains separate accepted-state reads, not an atomic block snapshot or a signed attestation.',
@@ -104,12 +110,14 @@ export async function loadAttempts(reader: AttemptReader, id: string, creator: s
 }
 
 export async function loadReview(
-  reader: ReviewReader & Partial<AttemptReader>,
+  reader: ReviewReader & Partial<AttemptReader> & Partial<PayoutReader>,
   campaignIdInput: string,
   creatorInput: string,
   contractAddress: string,
   retrievedAt = new Date(),
   withAttempts = false,
+  contractVersion?: string,
+  withPayout = false,
 ) {
   const id = campaignIdInput.trim()
   if (!id) throw new Error('Enter a sponsorship ID.')
@@ -152,12 +160,25 @@ export async function loadReview(
   }
   const attempts = withAttempts ? await loadAttempts(reader as AttemptReader, id, creator) : []
 
+  if (withPayout && !reader.getPayout) throw new Error('V4 payout methods are unavailable.')
+  const payoutRecord = withPayout ? parsePayout(await reader.getPayout!(id, creator)) : null
+  // Plain strings only, so the JSON export never meets a bigint.
+  const payout = payoutRecord && payoutRecord.status
+    ? {
+        status: payoutRecord.status,
+        pendingWei: payoutRecord.pendingWei.toString(),
+        pending: formatGen(payoutRecord.pendingWei),
+        claimBy: payoutRecord.status === 'RESERVED' ? dayToDate(payoutRecord.expiresDay) : '',
+        expired: payoutRecord.expired,
+      }
+    : null
+
   return {
     schema: 'proofsponsor.delivery-review.v1',
     source: {
       chain: 'GenLayer StudioNet',
       contract: contractAddress,
-      contractVersion: withAttempts ? '3' : '1',
+      contractVersion: contractVersion ?? (withAttempts ? '3' : '1'),
       state: 'accepted',
       retrievedAtUtc: retrievedAt.toISOString(),
     },
@@ -177,6 +198,7 @@ export async function loadReview(
       reason: text(reason),
     },
     attempts,
+    payout,
     claim: { claimed: isClaimed, claimedBy: claimOwner, matchesCreator: claimMatchesCreator },
     inconsistent: (status === 'APPROVED' && !claimMatchesCreator) || (!isClaimed && !!claimOwner) ||
       (withAttempts && attempts[attempts.length - 1]?.status !== status),

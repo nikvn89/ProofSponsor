@@ -1,8 +1,14 @@
-# V3 screenshot evidence
+# Runtime evidence files
+
+## V4
+
+- `v4-delivery-a.html` — public delivery page for the V4 StudioNet run in `TESTING.md` (creator `0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE`). Served at https://nikvn89.github.io/ProofSponsor/evidence/v4-delivery-a.html.
+
+## V3 screenshot evidence
 
 These screenshots record the completed V3 StudioNet recovery run for campaign `v3-recovery-250925-01`. They support the linked Explorer transactions and accepted-state reads documented in [`RUNTIME_EVIDENCE.md`](../../RUNTIME_EVIDENCE.md); screenshots are not a substitute for onchain evidence.
 
-## Retained files
+### Retained files
 
 - [x] `v3-contract-deployment.png` — fresh V3 address with finalized deployment and successful consensus result.
 - [x] `v3-create-campaign-tx.png` — finalized `create_campaign` transaction for the recovery campaign.
@@ -12,7 +18,7 @@ These screenshots record the completed V3 StudioNet recovery run for campaign `v
 - [x] `v3-final-judgment-tx.png` — finalized retry transaction with GenVM equivalence output `APPROVED`.
 - [x] `v3-after-recovered.png` — accepted UI state shows `APPROVED`, `100%`, and attempt history still `1/3`.
 
-## Scope boundary
+### Scope boundary
 
 The exact `submit_content` hash and first unavailable `judge_content` hash were not retained in the supplied captures, so they are not guessed here. The accepted UI states before and after those calls are preserved. The final retry hash is linked in `RUNTIME_EVIDENCE.md` and reaches `Accepted`, `SUCCESS`, and `Finalized`.
 

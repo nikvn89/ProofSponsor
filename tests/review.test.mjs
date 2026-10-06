@@ -179,3 +179,24 @@ test('accepts UNAVAILABLE while still rejecting unknown delivery states', async 
     /unrecognized delivery status/,
   )
 })
+
+test('V4 reviews carry the reward record as plain strings for JSON export', async () => {
+  const reader = mockV2Reader({
+    getAttemptCount: async () => 1,
+    getAttemptStatus: async () => 'APPROVED',
+    getPayout: async () => JSON.stringify({
+      payout_status: 'RESERVED', pending_wei: '2500000000000000000', reserved_day: 20732,
+      expires_day: 20762, today: 20733, expired: false, reservable_now: false,
+    }),
+  })
+  const review = await loadReview(reader, 'case-1', creator, contract, new Date('2026-10-07T00:00:00Z'), true, '4', true)
+  assert.equal(review.source.contractVersion, '4')
+  assert.deepEqual(review.payout, {
+    status: 'RESERVED', pendingWei: '2500000000000000000', pending: '2.5 GEN', claimBy: '2026-11-05', expired: false,
+  })
+  assert.doesNotThrow(() => JSON.stringify(review))
+  const none = await loadReview(mockV2Reader({ getAttemptCount: async () => 1, getAttemptStatus: async () => 'APPROVED', getPayout: async () => '{}' }),
+    'case-1', creator, contract, new Date(), true, '4', true)
+  assert.equal(none.payout, null)
+  await assert.rejects(loadReview(mockReader(), 'case-1', creator, contract, new Date(), false, '4', true), /payout methods/)
+})

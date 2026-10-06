@@ -5,6 +5,13 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   Clipboard,
+  Clock3,
+  Coins,
+  HandCoins,
+  Lock,
+  LockOpen,
+  PiggyBank,
+  RotateCcw,
   ExternalLink,
   FileCheck2,
   Gauge,
@@ -22,7 +29,7 @@ import {
 import WalletButton from './components/WalletButton'
 import StatusPill from './components/StatusPill'
 import ReviewDossier from './ReviewDossier'
-import { CONTRACT_ADDRESS, EXPLORER_BASE, REVISION_ENABLED, V3_CONFIG_ERROR } from './lib/config'
+import { CONFIG_ERROR, CONTRACT_ADDRESS, CONTRACT_VERSION, EXPLORER_BASE, REVISION_ENABLED, TREASURY_ENABLED } from './lib/config'
 import { loadAttempts, parseReviewHash, reviewPath, safeEvidenceUrl } from './lib/review'
 import type { AttemptReader } from './lib/review'
 import {
@@ -31,7 +38,18 @@ import {
   pollSubmissionStatus,
   sponsorJudge,
   validateEvidenceUrl,
+  waitForReceipt,
 } from './lib/genlayer'
+import type { WriteResult } from './lib/genlayer'
+import {
+  formatGen,
+  parseGen,
+  parsePayout,
+  parseTreasury,
+  payoutView,
+  reclaimBlocker,
+} from './lib/treasury'
+import type { Payout, Treasury } from './lib/treasury'
 import { getRecentCampaigns, rememberCampaign } from './lib/storage'
 
 type Campaign = {
@@ -67,7 +85,7 @@ function useCanonicalEvidenceUrl(value: string) {
 
   useEffect(() => {
     const url = value.trim()
-    if (!url.startsWith('https://') || V3_CONFIG_ERROR) {
+    if (!url.startsWith('https://') || CONFIG_ERROR) {
       setCanonical('')
       return
     }
@@ -118,7 +136,12 @@ function Dashboard() {
     id: '',
     name: '',
     requirements: '',
+    reward: '',
   })
+
+  const [treasury, setTreasury] = useState<Treasury | null>(null)
+  const [payout, setPayout] = useState<Payout | null>(null)
+  const [fundAmount, setFundAmount] = useState('')
 
   const [proofWallet, setProofWallet] = useState('')
   const [proofMarker, setProofMarker] = useState('')
@@ -197,6 +220,15 @@ function Dashboard() {
       })
     }
 
+    let rewardWei = 0n
+    if (TREASURY_ENABLED) {
+      try {
+        rewardWei = parseGen(createForm.reward || '0')
+      } catch (error) {
+        return setNotice({ kind: 'error', message: msg(error) })
+      }
+    }
+
     setBusy('create')
 
     try {
@@ -205,15 +237,17 @@ function Dashboard() {
         createForm.id.trim(),
         createForm.name.trim(),
         createForm.requirements.trim(),
+        rewardWei,
       )
 
       setCampaignId(createForm.id.trim())
       setRecent(rememberCampaign(createForm.id.trim()))
-      setNotice({
-        kind: 'success',
-        message: 'Sponsorship created and finalized.',
-        tx: result.hash,
-      })
+      setNotice(writeNotice(
+        result,
+        TREASURY_ENABLED && rewardWei > 0n
+          ? 'Sponsorship created. Fund the reward pool so approved deliveries can be paid.'
+          : 'Sponsorship created.',
+      ))
 
       await loadCampaign(createForm.id.trim())
     } catch (error) {
@@ -250,11 +284,99 @@ function Dashboard() {
       setCampaignId(id)
       setRecent(rememberCampaign(id))
       setSubmission(null)
+      setPayout(null)
+      await refreshTreasury(id)
     } catch (error) {
       setNotice({ kind: 'error', message: msg(error) })
     } finally {
       setBusy('')
     }
+  }
+
+  async function refreshTreasury(id: string) {
+    if (!TREASURY_ENABLED) return setTreasury(null)
+    setTreasury(parseTreasury(await sponsorJudge.getCampaignTreasury(id)))
+  }
+
+  async function refreshPayout(id: string, creator: string) {
+    if (!TREASURY_ENABLED) return setPayout(null)
+    setPayout(parsePayout(await sponsorJudge.getPayout(id, creator)))
+  }
+
+  async function runWrite(
+    label: string,
+    action: () => Promise<WriteResult>,
+    success: string,
+    after: () => Promise<void>,
+  ) {
+    if (!account) return setNotice({ kind: 'error', message: 'Connect wallet first.' })
+    setBusy(label)
+    setNotice({ kind: 'info', message: 'Confirm in your wallet, then wait for consensus…' })
+    try {
+      const result = await action()
+      setNotice(writeNotice(result, success))
+      await after()
+    } catch (error) {
+      setNotice({ kind: 'error', message: msg(error), tx: (error as { hash?: string })?.hash })
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function reloadCampaignMoney() {
+    if (!campaign) return
+    await refreshTreasury(campaign.id)
+    if (submission) await refreshPayout(campaign.id, submission.creator)
+  }
+
+  function fund(event: React.FormEvent) {
+    event.preventDefault()
+    if (!campaign) return
+    let amount: bigint
+    try {
+      amount = parseGen(fundAmount)
+      if (amount === 0n) throw new Error('Enter an amount greater than zero.')
+    } catch (error) {
+      return setNotice({ kind: 'error', message: msg(error) })
+    }
+    void runWrite('fund', () => sponsorJudge.fundCampaign(account, campaign.id, amount),
+      `Added ${formatGen(amount)} to the reward pool.`, async () => {
+        setFundAmount('')
+        await reloadCampaignMoney()
+      })
+  }
+
+  function toggleActive() {
+    if (!campaign) return
+    const next = !campaign.active
+    void runWrite('active', () => sponsorJudge.setCampaignActive(account, campaign.id, next),
+      next ? 'Campaign reopened for submissions.' : 'Campaign closed. Deliveries already submitted can still be verified and paid.',
+      () => loadCampaign(campaign.id))
+  }
+
+  function reclaim() {
+    if (!campaign || !treasury) return
+    const amount = treasury.availableWei
+    void runWrite('reclaim', () => sponsorJudge.reclaimUnused(account, campaign.id),
+      `Reclaimed ${formatGen(amount)}. Reserved rewards stay in the pool for their creators.`, reloadCampaignMoney)
+  }
+
+  function withdraw() {
+    if (!campaign) return
+    void runWrite('withdraw', () => sponsorJudge.withdrawReward(account, campaign.id),
+      'Reward sent to your wallet.', reloadCampaignMoney)
+  }
+
+  function reserveNow() {
+    if (!campaign || !submission) return
+    void runWrite('reserve', () => sponsorJudge.reserveUnderfunded(account, campaign.id, submission.creator),
+      'Reward reserved for the creator. The 30-day claim window starts today.', reloadCampaignMoney)
+  }
+
+  function releaseExpired() {
+    if (!campaign || !submission) return
+    void runWrite('release', () => sponsorJudge.releaseExpiredReward(account, campaign.id, submission.creator),
+      'Expired reward released back to the campaign pool.', reloadCampaignMoney)
   }
 
   async function getProof() {
@@ -323,11 +445,7 @@ function Dashboard() {
       )
 
       setLookupWallet(account)
-      setNotice({
-        kind: 'success',
-        message: 'Deliverable submitted. Status is SUBMITTED.',
-        tx: result.hash,
-      })
+      setNotice(writeNotice(result, 'Deliverable submitted. Status is SUBMITTED.'))
 
       await loadSubmission(account)
     } catch (error) {
@@ -382,6 +500,10 @@ function Dashboard() {
         maxUnavailableRetries = Number(retryState[2])
       }
 
+      if (TREASURY_ENABLED) {
+        await Promise.all([refreshPayout(campaign.id, address), refreshTreasury(campaign.id)])
+      }
+
       setLookupWallet(address)
       setSubmission({
         creator: address,
@@ -397,6 +519,7 @@ function Dashboard() {
     } catch (error) {
       setNotice({ kind: 'error', message: msg(error) })
       setSubmission(null)
+      setPayout(null)
     } finally {
       setBusy('')
     }
@@ -421,7 +544,7 @@ function Dashboard() {
       )
       await loadSubmission(account)
       setRevisionForm({ description: '', evidence: '' })
-      setNotice({ kind: 'success', message: 'Revised attempt stored. Request a new verification.', tx: result.hash })
+      setNotice(writeNotice(result, 'Revised attempt stored. Request a new verification.'))
     } catch (error) {
       setNotice({ kind: 'error', message: msg(error) })
     } finally {
@@ -452,12 +575,21 @@ function Dashboard() {
         tx: result.hash,
       })
 
-      await pollSubmissionStatus(campaign.id, submission.creator)
+      const verdict = await waitForReceipt(result.hash, 300_000, 6_000)
+      if (verdict.kind === 'error') {
+        setNotice({ kind: 'error', message: verdict.reason, tx: result.hash })
+        return
+      }
+      if (verdict.kind === 'pending') {
+        await pollSubmissionStatus(campaign.id, submission.creator, { timeoutMs: 60_000 })
+      }
       await loadSubmission(submission.creator)
 
       setNotice({
-        kind: 'success',
-        message: 'Delivery verification finished.',
+        kind: verdict.kind === 'success' ? 'success' : 'info',
+        message: verdict.kind === 'success'
+          ? 'Delivery verification finished.'
+          : 'Verification was submitted; consensus is still finalizing. Reload the delivery shortly.',
         tx: result.hash,
       })
     } catch (error) {
@@ -572,6 +704,13 @@ function Dashboard() {
                 label="Delivery"
                 value={submission?.status || 'Not submitted'}
               />
+              {TREASURY_ENABLED && (
+                <Metric
+                  icon={<Coins size={17} />}
+                  label="Reward pool"
+                  value={treasury ? formatGen(treasury.poolWei) : '—'}
+                />
+              )}
             </div>
           </section>
 
@@ -597,9 +736,9 @@ function Dashboard() {
             </div>
           )}
 
-          {V3_CONFIG_ERROR && (
+          {CONFIG_ERROR && (
             <div className="notice error" role="alert">
-              V3 requires a newly deployed contract address. Deploy ProofSponsorV3.py, then set VITE_CONTRACT_ADDRESS before enabling VITE_CONTRACT_VERSION=3.
+              Contract version {CONTRACT_VERSION} needs its own deployed address. Deploy contracts/ProofSponsorV{CONTRACT_VERSION}.py, then set VITE_CONTRACT_ADDRESS.
             </div>
           )}
 
@@ -647,6 +786,22 @@ function Dashboard() {
                     placeholder="Creator must publish an original public article that..."
                   />
                 </Field>
+
+                {TREASURY_ENABLED && (
+                  <Field label="Reward per approved delivery (GEN)">
+                    <input
+                      inputMode="decimal"
+                      value={createForm.reward}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, reward: e.target.value })
+                      }
+                      placeholder="10"
+                    />
+                    <small>
+                      Paid from the campaign pool when validators approve a delivery. Fund the pool after publishing; 0 means no reward.
+                    </small>
+                  </Field>
+                )}
 
                 <button className="action primary-action" disabled={busy === 'create'}>
                   {busy === 'create' ? (
@@ -715,6 +870,20 @@ function Dashboard() {
                     Sponsor
                     <code>{campaign.creator}</code>
                   </div>
+
+                  {TREASURY_ENABLED && treasury && (
+                    <TreasuryPanel
+                      treasury={treasury}
+                      isSponsor={!!account && account.toLowerCase() === campaign.creator.toLowerCase()}
+                      active={campaign.active}
+                      busy={busy}
+                      fundAmount={fundAmount}
+                      setFundAmount={setFundAmount}
+                      onFund={fund}
+                      onToggle={toggleActive}
+                      onReclaim={reclaim}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="empty-state">
@@ -954,6 +1123,18 @@ function Dashboard() {
                       </div>
                     )}
 
+                    {TREASURY_ENABLED && (
+                      <PayoutBox
+                        payout={payout}
+                        treasury={treasury}
+                        isCreator={!!account && account.toLowerCase() === submission.creator.toLowerCase()}
+                        busy={busy}
+                        onWithdraw={withdraw}
+                        onRelease={releaseExpired}
+                        onReserve={reserveNow}
+                      />
+                    )}
+
                     {['SUBMITTED', 'UNAVAILABLE'].includes(submission.status) && (
                       <>
                         <button
@@ -1077,8 +1258,8 @@ function Dashboard() {
                 body="Validators compare meaning and substance, not only keywords."
               />
               <Principle
-                title="Reusable onchain result"
-                body="Verified outcomes can power rewards, escrow or reputation."
+                title="Paid on the verdict"
+                body="An approved delivery reserves its reward from the sponsor's pool; the creator withdraws it within 30 days."
               />
             </div>
           </section>
@@ -1095,6 +1276,138 @@ function Dashboard() {
           <ExternalLink size={12} />
         </a>
       </footer>
+    </div>
+  )
+}
+
+function writeNotice(result: WriteResult, success: string): Notice {
+  return result.verdict.kind === 'success'
+    ? { kind: 'success', message: success, tx: result.hash }
+    : {
+        kind: 'info',
+        message: 'Submitted — confirmation is delayed. Check the transaction, then reload before trying again.',
+        tx: result.hash,
+      }
+}
+
+function TreasuryPanel({
+  treasury,
+  isSponsor,
+  active,
+  busy,
+  fundAmount,
+  setFundAmount,
+  onFund,
+  onToggle,
+  onReclaim,
+}: {
+  treasury: Treasury
+  isSponsor: boolean
+  active: boolean
+  busy: string
+  fundAmount: string
+  setFundAmount: (value: string) => void
+  onFund: (event: React.FormEvent) => void
+  onToggle: () => void
+  onReclaim: () => void
+}) {
+  const blocker = reclaimBlocker(treasury, isSponsor)
+  return (
+    <div className="treasury">
+      <div className="treasury-head">
+        <span><PiggyBank size={15} /> Reward treasury</span>
+        <strong>{formatGen(treasury.rewardWei)} per approved delivery</strong>
+      </div>
+      <dl className="treasury-grid">
+        <div><dt>Pool</dt><dd>{formatGen(treasury.poolWei)}</dd></div>
+        <div><dt>Reserved for creators</dt><dd>{formatGen(treasury.reservedWei)}</dd></div>
+        <div><dt>Available</dt><dd>{formatGen(treasury.availableWei)}</dd></div>
+      </dl>
+      <p className="treasury-note">
+        {treasury.openSubmissions} awaiting a verdict · {treasury.waitingForFunds} approved and waiting for funds
+      </p>
+
+      {isSponsor && (
+        <div className="sponsor-actions">
+          <form className="search-line" onSubmit={onFund}>
+            <input
+              inputMode="decimal"
+              value={fundAmount}
+              onChange={(e) => setFundAmount(e.target.value)}
+              placeholder="Amount in GEN"
+            />
+            <button className="action secondary-action" disabled={busy === 'fund'}>
+              {busy === 'fund' ? <LoaderCircle className="spin" size={16} /> : <Coins size={16} />} Fund pool
+            </button>
+          </form>
+          <div className="sponsor-buttons">
+            <button className="action secondary-action" onClick={onToggle} disabled={busy === 'active'}>
+              {active ? <Lock size={16} /> : <LockOpen size={16} />}
+              {active ? 'Close campaign' : 'Reopen campaign'}
+            </button>
+            <button
+              className="action secondary-action"
+              onClick={onReclaim}
+              disabled={!!blocker || busy === 'reclaim'}
+              title={blocker ?? undefined}
+            >
+              <RotateCcw size={16} /> Reclaim {blocker ? '' : formatGen(treasury.availableWei)}
+            </button>
+          </div>
+          {blocker && <small className="treasury-note">Reclaim: {blocker}</small>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PayoutBox({
+  payout,
+  treasury,
+  isCreator,
+  busy,
+  onWithdraw,
+  onRelease,
+  onReserve,
+}: {
+  payout: Payout | null
+  treasury: Treasury | null
+  isCreator: boolean
+  busy: string
+  onWithdraw: () => void
+  onRelease: () => void
+  onReserve: () => void
+}) {
+  const view = payoutView(payout, treasury, isCreator)
+  if (!view) return null
+  return (
+    <div className={`payout-box ${view.tone}`}>
+      <div className="payout-head">
+        {view.tone === 'warn' ? <Clock3 size={20} /> : <HandCoins size={20} />}
+        <div>
+          <strong>{view.label}</strong>
+          <p>{view.detail}</p>
+        </div>
+      </div>
+      {(view.canWithdraw || view.canRelease || view.canReserve) && (
+        <div className="payout-actions">
+          {view.canWithdraw && (
+            <button className="action primary-action" onClick={onWithdraw} disabled={busy === 'withdraw'}>
+              {busy === 'withdraw' ? <LoaderCircle className="spin" size={16} /> : <HandCoins size={16} />} Withdraw reward
+            </button>
+          )}
+          {view.canReserve && (
+            <button className="action secondary-action" onClick={onReserve} disabled={busy === 'reserve'}>
+              <Coins size={16} /> Reserve reward now
+            </button>
+          )}
+          {view.canRelease && (
+            <button className="action secondary-action" onClick={onRelease} disabled={busy === 'release'}>
+              <RotateCcw size={16} /> Release expired reward
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

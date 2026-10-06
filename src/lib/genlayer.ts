@@ -1,8 +1,9 @@
 import { createClient } from 'genlayer-js'
 import { studionet } from 'genlayer-js/chains'
-import { TransactionStatus } from 'genlayer-js/types'
 import { getAddress } from 'viem'
-import { CONTRACT_ADDRESS, STUDIO_RPC } from './config'
+import { CONTRACT_ADDRESS, STUDIO_RPC, STUDIONET_CHAIN_ID, TREASURY_ENABLED, WALLET_ADD_RPC } from './config'
+import { classifyTransaction } from './receipt'
+import type { ReceiptVerdict } from './receipt'
 
 const chain = {
   ...studionet,
@@ -13,7 +14,7 @@ const chain = {
   },
 }
 
-// Avoid aggressive RPC polling while waiting for normal transactions.
+// Normal writes: give consensus up to ten minutes before reporting a delay.
 const RECEIPT_POLL_INTERVAL_MS = 15_000
 const RECEIPT_MAX_RETRIES = 40
 
@@ -40,13 +41,7 @@ export const getClient = (account?: string) => {
 }
 
 export async function connectWallet(): Promise<string> {
-  if (!window.ethereum) {
-    throw new Error(
-      'No browser wallet detected. Install MetaMask or a compatible wallet.',
-    )
-  }
-
-  const accounts = (await window.ethereum.request({
+  const accounts = (await ethereum().request({
     method: 'eth_requestAccounts',
   })) as string[]
 
@@ -54,6 +49,7 @@ export async function connectWallet(): Promise<string> {
     throw new Error('Wallet connection was not approved.')
   }
 
+  await ensureStudioNet()
   return normalizeAddress(accounts[0])
 }
 
@@ -87,71 +83,129 @@ export function validateEvidenceUrl(url: string): string {
 const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
+const STUDIONET_CHAIN_HEX = `0x${STUDIONET_CHAIN_ID.toString(16)}`
+
+function ethereum() {
+  if (!window.ethereum) {
+    throw new Error(
+      'No browser wallet detected. Install MetaMask or a compatible wallet.',
+    )
+  }
+  return window.ethereum
+}
+
 /**
- * Normal state-changing transaction.
- *
- * Used for:
- * - create_campaign
- * - set_campaign_active
- * - submit_content
+ * Put the wallet on StudioNet with wallet_switchEthereumChain, adding the
+ * network first when the wallet does not know it (error 4902). No Snap is
+ * requested, so plain MetaMask works.
+ */
+export async function ensureStudioNet(): Promise<void> {
+  const eth = ethereum()
+  const current = (await eth.request({ method: 'eth_chainId' })) as string
+  if (Number.parseInt(current, 16) === STUDIONET_CHAIN_ID) return
+  try {
+    await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: STUDIONET_CHAIN_HEX }] })
+    return
+  } catch (error: any) {
+    if (Number(error?.code) === 4001) throw new Error('Network switch was rejected in the wallet.')
+    if (Number(error?.code) !== 4902) throw error
+  }
+  await eth.request({
+    method: 'wallet_addEthereumChain',
+    params: [{
+      chainId: STUDIONET_CHAIN_HEX,
+      chainName: 'GenLayer Studio Network',
+      rpcUrls: [WALLET_ADD_RPC],
+      nativeCurrency: { name: 'GEN Token', symbol: 'GEN', decimals: 18 },
+    }],
+  })
+  await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: STUDIONET_CHAIN_HEX }] })
+}
+
+async function rawTransaction(hash: string): Promise<any> {
+  const response = await fetch(STUDIO_RPC, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_getTransactionByHash', params: [hash] }),
+  })
+  const body = await response.json()
+  return body?.result ?? null
+}
+
+/**
+ * Poll the raw transaction until the leader receipt and consensus status say
+ * whether the write was applied. "pending" at the deadline means: submitted,
+ * confirmation delayed — never reported as success.
+ */
+export async function waitForReceipt(
+  hash: string,
+  timeoutMs = RECEIPT_POLL_INTERVAL_MS * RECEIPT_MAX_RETRIES,
+  intervalMs = 4_000,
+): Promise<ReceiptVerdict> {
+  const deadline = Date.now() + timeoutMs
+  let last: ReceiptVerdict = { kind: 'pending', status: '' }
+  while (Date.now() < deadline) {
+    try {
+      const tx = await rawTransaction(hash)
+      if (tx) {
+        last = classifyTransaction(tx)
+        if (last.kind !== 'pending') return last
+      }
+    } catch {
+      // Temporary RPC failures are not a verdict; keep polling.
+    }
+    await sleep(intervalMs)
+  }
+  return last
+}
+
+export type WriteResult = { hash: string; verdict: ReceiptVerdict }
+
+async function send(
+  account: string,
+  functionName: string,
+  args: Array<string | boolean | bigint>,
+  value: bigint,
+): Promise<string> {
+  await ensureStudioNet()
+  const client = getClient(account)
+  return (await client.writeContract({
+    address: CONTRACT_ADDRESS,
+    functionName,
+    args: args as any,
+    value,
+  })) as string
+}
+
+/**
+ * Normal state-changing transaction. Resolves only when the leader receipt
+ * reports SUCCESS on an applied status; a revert throws with the contract's
+ * own sentence. A delayed confirmation resolves with verdict "pending".
  */
 async function write(
   account: string,
   functionName: string,
-  args: Array<string | boolean>,
-) {
-  const client = getClient(account)
-
-  // Ensure the connected wallet is using GenLayer Studionet
-  // before sending the transaction.
-  await client.connect('studionet')
-
-  const hash = await client.writeContract({
-    address: CONTRACT_ADDRESS,
-    functionName,
-    args,
-    value: BigInt(0),
-  })
-
-  const receipt = await client.waitForTransactionReceipt({
-    hash,
-    status: TransactionStatus.ACCEPTED,
-    interval: RECEIPT_POLL_INTERVAL_MS,
-    retries: RECEIPT_MAX_RETRIES,
-  })
-
-  return {
-    hash,
-    receipt,
+  args: Array<string | boolean | bigint>,
+  value: bigint = 0n,
+): Promise<WriteResult> {
+  const hash = await send(account, functionName, args, value)
+  const verdict = await waitForReceipt(hash)
+  if (verdict.kind === 'error') {
+    throw Object.assign(new Error(verdict.reason), { hash })
   }
+  return { hash, verdict }
 }
 
 /**
- * AI adjudication transaction.
- *
- * Submitted without waiting for the receipt because consensus
- * can take longer. The final verdict is polled separately.
+ * AI adjudication transaction. Returns the hash at once; the caller waits
+ * with waitForReceipt and a longer timeout because consensus takes longer.
  */
 async function writeAsync(
   account: string,
   functionName: string,
   args: Array<string | boolean>,
 ) {
-  const client = getClient(account)
-
-  // Ensure the connected wallet is using GenLayer Studionet.
-  await client.connect('studionet')
-
-  const hash = await client.writeContract({
-    address: CONTRACT_ADDRESS,
-    functionName,
-    args,
-    value: BigInt(0),
-  })
-
-  return {
-    hash,
-  }
+  return { hash: await send(account, functionName, args, 0n) }
 }
 
 /**
@@ -249,12 +303,35 @@ export const sponsorJudge = {
     campaignId: string,
     name: string,
     requirements: string,
+    rewardWei: bigint,
   ) =>
-    write(account, 'create_campaign', [
-      campaignId,
-      name,
-      requirements,
-    ]),
+    write(account, 'create_campaign', TREASURY_ENABLED
+      ? [campaignId, name, requirements, rewardWei]
+      : [campaignId, name, requirements]),
+
+  fundCampaign: (account: string, campaignId: string, amountWei: bigint) =>
+    write(account, 'fund_campaign', [campaignId], amountWei),
+
+  withdrawReward: (account: string, campaignId: string) =>
+    write(account, 'withdraw_reward', [campaignId]),
+
+  reserveUnderfunded: (account: string, campaignId: string, creator: string) =>
+    write(account, 'reserve_underfunded', [campaignId, normalizeAddress(creator)]),
+
+  releaseExpiredReward: (account: string, campaignId: string, creator: string) =>
+    write(account, 'release_expired_reward', [campaignId, normalizeAddress(creator)]),
+
+  reclaimUnused: (account: string, campaignId: string) =>
+    write(account, 'reclaim_unused', [campaignId]),
+
+  getCampaignTreasury: (campaignId: string) =>
+    read('get_campaign_treasury', [campaignId]) as Promise<string>,
+
+  getPayout: (campaignId: string, creator: string) =>
+    read('get_payout', [campaignId, normalizeAddress(creator)]) as Promise<string>,
+
+  getContractInfo: () =>
+    read('get_contract_info', []) as Promise<string>,
 
   setCampaignActive: (
     account: string,
