@@ -1,5 +1,28 @@
 # ProofSponsor — StudioNet Runtime Evidence
 
+## V4 — the verdict pays
+
+- Network: GenLayer StudioNet (`61999`)
+- Contract: [`0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b`](https://explorer-studio.genlayer.com/address/0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b) · source `contracts/ProofSponsorV4.py`, SHA-256 `ed907ccd352ccf17ff3b9db3ecef0312085e0f2e711b1ac8b447f2a8607dd052`
+- Deployment: [`0xa86a5aef…60e065`](https://explorer-studio.genlayer.com/tx/0xa86a5aefde582a5aa3e4c0442368cb220638c89e9b51f60ca3d5f4064060e065) — `FINALIZED / SUCCESS / Accepted`
+- Campaign: `v4-pay-061026`, reward 1 GEN · Sponsor `0x6276095FAEA15108740445ff277fdA8c304657F4` · Creator `0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE`
+- Public evidence: https://nikvn89.github.io/ProofSponsor/evidence/v4-delivery-a.html
+
+| Step | Result | Transaction |
+| --- | --- | --- |
+| `create_campaign` | reward 1 GEN | [`0x83056bcb…3cdc30`](https://explorer-studio.genlayer.com/tx/0x83056bcbbdcbff39b6f8e07b4edb354871206f80ba5014121585815d053cdc30) |
+| `fund_campaign` 1.5 GEN | pool 1.5 GEN | [`0x0fe1a86d…825b84`](https://explorer-studio.genlayer.com/tx/0x0fe1a86d22d9fb70aea51d03719d41e3ac1e826d136e7e5383af4a4086825b84) |
+| `submit_content` (creator) | `SUBMITTED` | [`0x846aa6ea…f47d8b`](https://explorer-studio.genlayer.com/tx/0x846aa6ea0622c18c8b5541c7952d64575f821ee5f66b6694dbb6022f4df47d8b) |
+| `set_campaign_active(false)` | `CLOSED` | [`0x9e4cacd7…5dd900`](https://explorer-studio.genlayer.com/tx/0x9e4cacd7fbbfb65756c9c9db4e1c739c01a608ba1937c64270117f1b955dd900) |
+| `judge_content` on the closed campaign | `APPROVED`, 1 GEN `RESERVED` | [`0xe05d1cc9…f1b84c`](https://explorer-studio.genlayer.com/tx/0xe05d1cc9589bf7c6dc5bb9672e9bf872a260a6d1e8f1f52f78cc4cda47f1b84c) |
+| `reclaim_unused` (sponsor) | 0.5 GEN returned; reserved 1 GEN untouched | [`0x28089360…93e265`](https://explorer-studio.genlayer.com/tx/0x28089360e8a0f19ee45305420f01854c336866101fdffaaf6665fc0b8093e265) + transfer [`0x520b3247…516ec9`](https://explorer-studio.genlayer.com/tx/0x520b32472c34074b5261e570cd2dd5976348e31a7a2da588594b337add516ec9) |
+| `withdraw_reward` (creator) | 1 GEN paid, `PAID`, pool 0 | [`0xf0080e5a…d53e5c`](https://explorer-studio.genlayer.com/tx/0xf0080e5a2f1776cc28124ef993b55ee99ea162e65f8d78cc8a6b13ea29d53e5c) + transfer [`0xbc65caae…8fae42`](https://explorer-studio.genlayer.com/tx/0xbc65caaef75a3eb2f7bb24bff2476aaa953ba081618dd09cc148c8d6728fae42) |
+
+Screenshots: [`v4-campaign-closed.png`](./docs/evidence/v4-campaign-closed.png), [`v4-reserved-after-close.png`](./docs/evidence/v4-reserved-after-close.png), [`v4-treasury-after-reclaim.png`](./docs/evidence/v4-treasury-after-reclaim.png), [`v4-reward-paid.png`](./docs/evidence/v4-reward-paid.png). The 30-day expiry and late reservation of an underfunded reward are covered by the Direct Mode suite only, since a live run would take a month.
+
+---
+
+
 ## V3 — retrieval-safe adjudication
 
 V3 was deployed separately and exercised on StudioNet. The load-bearing milestone behavior—recovering one preserved attempt from `UNAVAILABLE` to `APPROVED`—was completed against accepted contract state. This record distinguishes linked onchain transactions, retained accepted-state screenshots, and local-only regressions; it does not promote a local test into runtime evidence.

@@ -3,6 +3,10 @@
 ## V4
 
 - `v4-delivery-a.html` — public delivery page for the V4 StudioNet run in `TESTING.md` (creator `0x037f58E33c1Ec8fdA272361E0aAC1e31054a1CDE`). Served at https://nikvn89.github.io/ProofSponsor/evidence/v4-delivery-a.html.
+- `v4-campaign-closed.png` — campaign closed with one delivery awaiting a verdict and 1.5 GEN in the pool.
+- `v4-reserved-after-close.png` — the delivery approved after closing, with 1 GEN reserved and the claim deadline.
+- `v4-treasury-after-reclaim.png` — after the sponsor's reclaim: pool 1 GEN, all of it reserved for the creator.
+- `v4-reward-paid.png` — the creator's withdrawal recorded as `Reward paid`.
 
 ## V3 screenshot evidence
 

@@ -15,10 +15,11 @@ https://proofsponsor-gl.vercel.app/
 **GenLayer Studionet — V4 (current)**
 
 ```text
-V4 CONTRACT ADDRESS: ⟨V4 address⟩
+V4 CONTRACT ADDRESS: 0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b
 ```
 
-- Deployment: ⟨V4 deploy tx⟩
+- Contract: https://explorer-studio.genlayer.com/address/0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b
+- Deployment: https://explorer-studio.genlayer.com/tx/0xa86a5aefde582a5aa3e4c0442368cb220638c89e9b51f60ca3d5f4064060e065 — `FINALIZED / SUCCESS / Accepted`
 - Source SHA-256 (`contracts/ProofSponsorV4.py`): `ed907ccd352ccf17ff3b9db3ecef0312085e0f2e711b1ac8b447f2a8607dd052`
 
 The previous generation, V3, stays readable at [`0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A`](https://explorer-studio.genlayer.com/address/0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A) (deployment `0xabe3c20f9275855183a535816e2ac26d79f9e807d7bf1f502b2c1430c0946ff3`, SHA-256 `932cd6f3bc6176c4d416d3870ef9123d313217bdfb1843bf427adc1021f59394`).
@@ -61,20 +62,20 @@ Delivery note:
 Published an explainer of the V4 payout flow: funded pool, reservation on approval, creator withdrawal and the 30-day expiry.
 ```
 
-| # | Wallet | Action | Expected | Result / tx |
+| # | Wallet | Action | Expected | Result on StudioNet (2026-10-06) |
 | --- | --- | --- | --- | --- |
-| 1 | S | Deploy `ProofSponsorV4.py` | `FINALIZED`, `SUCCESS` | ⟨tx⟩ |
-| 2 | S | Create the campaign with reward `1` GEN | Treasury: reward 1 GEN, pool 0 | ⟨tx⟩ |
-| 3 | S | **Fund pool** `1.5` GEN | Pool 1.5 GEN, available 1.5 GEN | ⟨tx⟩ |
-| 4 | C | Submit the delivery note and the evidence URL | `SUBMITTED`; 1 awaiting a verdict | ⟨tx⟩ |
-| 5 | S | **Close campaign** | Campaign `CLOSED` | ⟨tx⟩ |
-| 6 | S | **Verify delivery with GenLayer** (campaign is closed) | `APPROVED`; payout `1 GEN reserved`, claim by row-6 date + 30 days; reserved 1, available 0.5 | ⟨tx⟩ |
-| 7 | S | **Reclaim** | 0.5 GEN back to S; pool 1, reserved 1, available 0 | ⟨tx⟩ |
-| 8 | S | Studio: `release_expired_reward("v4-pay-061026", C)` | Revert `claim window is still open` (by design) | ⟨tx⟩ |
-| 9 | C | **Withdraw reward** | Payout `PAID`; pool 0; 1 GEN sent to C | ⟨tx⟩ |
-| 10 | C | Studio: `withdraw_reward("v4-pay-061026")` again | Revert `no reserved reward to withdraw` (by design) | ⟨tx⟩ |
+| 1 | S | Deploy `ProofSponsorV4.py` | `FINALIZED`, `SUCCESS` | Finalized, success · [`0xa86a5aef…60e065`](https://explorer-studio.genlayer.com/tx/0xa86a5aefde582a5aa3e4c0442368cb220638c89e9b51f60ca3d5f4064060e065) |
+| 2 | S | Create the campaign with reward `1` GEN | Treasury: reward 1 GEN, pool 0 | Reward 1 GEN, pool 0 · [`0x83056bcb…3cdc30`](https://explorer-studio.genlayer.com/tx/0x83056bcbbdcbff39b6f8e07b4edb354871206f80ba5014121585815d053cdc30) |
+| 3 | S | **Fund pool** `1.5` GEN | Pool 1.5 GEN, available 1.5 GEN | Pool 1.5 GEN, available 1.5 GEN · [`0x0fe1a86d…825b84`](https://explorer-studio.genlayer.com/tx/0x0fe1a86d22d9fb70aea51d03719d41e3ac1e826d136e7e5383af4a4086825b84) |
+| 4 | C | Submit the delivery note and the evidence URL | `SUBMITTED`; 1 awaiting a verdict | `SUBMITTED`, 1 awaiting a verdict · [`0x846aa6ea…f47d8b`](https://explorer-studio.genlayer.com/tx/0x846aa6ea0622c18c8b5541c7952d64575f821ee5f66b6694dbb6022f4df47d8b) |
+| 5 | S | **Close campaign** | Campaign `CLOSED` | `CLOSED` · [`0x9e4cacd7…5dd900`](https://explorer-studio.genlayer.com/tx/0x9e4cacd7fbbfb65756c9c9db4e1c739c01a608ba1937c64270117f1b955dd900) · [screenshot](./docs/evidence/v4-campaign-closed.png) |
+| 6 | S | **Verify delivery with GenLayer** (campaign is closed) | `APPROVED`; payout `1 GEN reserved`, claim by row-6 date + 30 days; reserved 1, available 0.5 | **`APPROVED` on the closed campaign; 1 GEN reserved, claim by 2026-11-05** · [`0xe05d1cc9…f1b84c`](https://explorer-studio.genlayer.com/tx/0xe05d1cc9589bf7c6dc5bb9672e9bf872a260a6d1e8f1f52f78cc4cda47f1b84c) · [screenshot](./docs/evidence/v4-reserved-after-close.png) |
+| 7 | S | **Reclaim** | 0.5 GEN back to S; pool 1, reserved 1, available 0 | 0.5 GEN to S; pool 1, reserved 1, available 0 · [`0x28089360…93e265`](https://explorer-studio.genlayer.com/tx/0x28089360e8a0f19ee45305420f01854c336866101fdffaaf6665fc0b8093e265), native transfer [`0x520b3247…516ec9`](https://explorer-studio.genlayer.com/tx/0x520b32472c34074b5261e570cd2dd5976348e31a7a2da588594b337add516ec9) · [screenshot](./docs/evidence/v4-treasury-after-reclaim.png) |
+| 8 | S | Studio: `release_expired_reward("v4-pay-061026", C)` | Revert `claim window is still open` (by design) | Not run on StudioNet; covered by `test_claim_window_closes_on_day_thirty` |
+| 9 | C | **Withdraw reward** | Payout `PAID`; pool 0; 1 GEN sent to C | `PAID`; pool 0; 1 GEN to C · [`0xf0080e5a…d53e5c`](https://explorer-studio.genlayer.com/tx/0xf0080e5a2f1776cc28124ef993b55ee99ea162e65f8d78cc8a6b13ea29d53e5c), native transfer [`0xbc65caae…8fae42`](https://explorer-studio.genlayer.com/tx/0xbc65caaef75a3eb2f7bb24bff2476aaa953ba081618dd09cc148c8d6728fae42) · [screenshot](./docs/evidence/v4-reward-paid.png) |
+| 10 | C | Studio: `withdraw_reward("v4-pay-061026")` again | Revert `no reserved reward to withdraw` (by design) | Not run on StudioNet; covered by `test_withdraw_pays_the_creator_once` |
 
-Row 6 is the closing-cannot-dodge proof (V3 reverted `campaign is closed` here). Rows 7–9 show that the sponsor's reclaim leaves the creator's reserved GEN untouched and that the creator is paid once. Underfunded reservation and the 30-day expiry are covered by Direct Mode tests, because a real run would need a month.
+All 10 transactions are on contract `0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b`. Row 6 is the closing-cannot-dodge proof (V3 reverted `campaign is closed` here). Rows 7–9 show that the sponsor's reclaim leaves the creator's reserved GEN untouched and that the creator is paid once. Underfunded reservation and the 30-day expiry are covered by Direct Mode tests, because a real run would need a month.
 
 ## V3 pre-deployment local gate — 2026-09-25
 

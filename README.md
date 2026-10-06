@@ -21,12 +21,12 @@ https://github.com/nikvn89/ProofSponsor
 **Network:** GenLayer Studionet
 
 ```text
-V4 CONTRACT ADDRESS: ⟨V4 address⟩
-V4 DEPLOYMENT TX: ⟨V4 deploy tx⟩
+V4 CONTRACT ADDRESS: 0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b
+V4 DEPLOYMENT TX: 0xa86a5aefde582a5aa3e4c0442368cb220638c89e9b51f60ca3d5f4064060e065
 ProofSponsorV4.py SHA-256: ed907ccd352ccf17ff3b9db3ecef0312085e0f2e711b1ac8b447f2a8607dd052
 ```
 
-The contract class is `SponsorJudgeV4`; the project and dApp remain branded **ProofSponsor**. V4 starts with empty storage. Earlier generations stay readable at their own addresses and are not migrated:
+The contract is live in the [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b), and the full StudioNet payout run (fund → approve after close → reclaim → creator withdrawal) is recorded in [TESTING.md](./TESTING.md). The contract class is `SponsorJudgeV4`; the project and dApp remain branded **ProofSponsor**. V4 starts with empty storage. Earlier generations stay readable at their own addresses and are not migrated:
 
 | Generation | Address | Source SHA-256 |
 | --- | --- | --- |
@@ -332,7 +332,7 @@ npm run build
 Create `.env` from `.env.example`.
 
 ```text
-VITE_CONTRACT_ADDRESS=⟨V4 address⟩
+VITE_CONTRACT_ADDRESS=0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b
 VITE_CONTRACT_VERSION=4
 ```
 
@@ -349,7 +349,7 @@ Output Directory: dist
 Environment variable:
 
 ```text
-VITE_CONTRACT_ADDRESS=⟨V4 address⟩
+VITE_CONTRACT_ADDRESS=0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b
 VITE_CONTRACT_VERSION=4
 ```
 

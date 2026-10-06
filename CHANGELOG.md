@@ -14,8 +14,8 @@
 
 ### Deployment boundary
 
-- V4 address: ⟨V4 address⟩
-- V4 deployment transaction: ⟨V4 deploy tx⟩
+- V4 address: `0x2cA205dF7F2AD3B6D87eE07439864db76d841a2b`
+- V4 deployment transaction: `0xa86a5aefde582a5aa3e4c0442368cb220638c89e9b51f60ca3d5f4064060e065`
 - V4 source SHA-256: `ed907ccd352ccf17ff3b9db3ecef0312085e0f2e711b1ac8b447f2a8607dd052`
 - V4 starts with empty storage; V3 records stay readable at `0x5f9950BCe63AcAb1b5DF02f0231A645fcbB74e0A`.
 
